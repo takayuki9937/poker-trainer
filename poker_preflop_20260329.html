@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Preflop Range Trainer</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0d0d0f;--surface:#16161a;--surface2:#1e1e24;
+    --border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.15);
+    --text:#f0efe8;--muted:#7a7a8a;
+    --red:#e03030;--blue:#2a7be4;--green:#1d9e75;--amber:#d4861a;--accent:#e03030;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;}
+  header{padding:24px 36px 18px;border-bottom:0.5px solid var(--border);display:flex;align-items:baseline;gap:14px;}
+  header h1{font-size:21px;font-weight:800;letter-spacing:-0.5px;}
+  header span{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;}
+  .tabs{display:flex;padding:0 36px;border-bottom:0.5px solid var(--border);}
+  .tab{padding:13px 22px;font-family:'DM Mono',monospace;font-size:12px;letter-spacing:0.05em;text-transform:uppercase;color:var(--muted);cursor:pointer;background:none;border:none;border-bottom:2px solid transparent;transition:color .12s,border-color .12s;}
+  .tab.active{color:var(--text);border-bottom-color:var(--accent);}
+  .tab:hover:not(.active){color:var(--text);}
+  .content{padding:26px 36px;max-width:980px;}
+  .sl{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+  .pos-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:20px;}
+  .pb{font-family:'DM Mono',monospace;font-size:12px;font-weight:500;letter-spacing:0.05em;padding:6px 13px;background:var(--surface);border:0.5px solid var(--border2);border-radius:4px;color:var(--muted);cursor:pointer;transition:all .1s;}
+  .pb:hover{color:var(--text);background:var(--surface2);}
+  .pb.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .pb.active-g{background:var(--green);border-color:var(--green);color:#fff;}
+  .cards-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px;}
+  .rank-row{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;}
+  .rb{font-family:'DM Mono',monospace;font-size:12px;font-weight:500;width:33px;height:33px;display:flex;align-items:center;justify-content:center;background:var(--surface);border:0.5px solid var(--border);border-radius:4px;color:var(--muted);cursor:pointer;transition:all .1s;}
+  .rb:hover{color:var(--text);border-color:var(--border2);}
+  .rb.active{background:var(--surface2);border-color:var(--border2);color:var(--text);}
+  .suit-row{display:flex;gap:5px;}
+  .sb{font-size:17px;width:35px;height:35px;display:flex;align-items:center;justify-content:center;background:var(--surface);border:0.5px solid var(--border);border-radius:4px;cursor:pointer;transition:all .1s;opacity:.45;}
+  .sb:hover{opacity:.8;border-color:var(--border2);}
+  .sb.active{opacity:1;border-color:var(--border2);background:var(--surface2);}
+  .sb.red{color:#e03030;}
+  .cd{display:inline-flex;align-items:center;justify-content:center;width:48px;height:65px;background:#fff;border-radius:6px;font-size:19px;font-weight:700;margin-top:8px;color:#111;flex-direction:column;line-height:1;font-family:'DM Mono',monospace;}
+  .cd .sc{font-size:12px;}
+  .cd.rc2{color:#c8230a;}
+  .cd.empty{background:var(--surface);color:var(--muted);font-size:14px;border:0.5px dashed var(--border2);}
+  .aarea{background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:22px;text-align:center;min-height:125px;display:flex;align-items:center;justify-content:center;}
+  .aph{color:var(--muted);font-size:13px;font-family:'DM Mono',monospace;}
+  .ai{display:flex;flex-direction:column;align-items:center;gap:11px;}
+  .hl{font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);}
+  .abadge{font-family:'DM Mono',monospace;font-size:24px;font-weight:500;letter-spacing:.03em;padding:9px 28px;border-radius:6px;}
+  .abadge.raise{background:rgba(224,48,48,.12);color:var(--red);border:1px solid var(--red);}
+  .abadge.threebet{background:rgba(212,134,26,.12);color:var(--amber);border:1px solid var(--amber);}
+  .abadge.call{background:rgba(42,123,228,.12);color:var(--blue);border:1px solid var(--blue);}
+  .abadge.mix{background:rgba(212,134,26,.12);color:var(--amber);border:1px solid var(--amber);}
+  .abadge.fold{background:rgba(255,255,255,.03);color:var(--muted);border:.5px solid var(--border2);}
+  .adesc{font-size:12px;color:var(--muted);font-family:'DM Mono',monospace;}
+  .rg{display:grid;grid-template-columns:repeat(13,minmax(0,1fr));gap:2px;}
+  .rc{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:9px;border-radius:3px;}
+  .rc.raise{background:var(--red);color:#fff;}
+  .rc.mix{background:var(--amber);color:#fff;}
+  .rc.threebet{background:var(--amber);color:#fff;}
+  .rc.call{background:var(--blue);color:#fff;}
+  .rc.fold{background:var(--surface2);color:#3a3a4a;border:.5px solid var(--border);}
+  .legend{display:flex;gap:13px;margin-bottom:11px;flex-wrap:wrap;}
+  .li{display:flex;align-items:center;gap:5px;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);}
+  .ld{width:12px;height:12px;border-radius:2px;}
+  .mode-row{display:flex;gap:6px;margin-bottom:18px;align-items:center;}
+  .mlabel{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-right:4px;}
+  .mbtn{font-family:'DM Mono',monospace;font-size:11px;padding:5px 12px;background:var(--surface);border:.5px solid var(--border2);border-radius:4px;color:var(--muted);cursor:pointer;transition:all .1s;}
+  .mbtn.active{background:var(--surface2);color:var(--text);border-color:var(--text);}
+  .rsec{margin-bottom:18px;}
+  @media(max-width:600px){header,.tabs,.content{padding-left:14px;padding-right:14px;}.cards-grid{grid-template-columns:1fr;}.rc{font-size:7px;}}
+</style>
+</head>
+<body>
+<header><h1>Preflop Range Trainer</h1><span>9-max · GTO · 100bb</span></header>
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('lookup')">アクション確認</button>
+  <button class="tab" onclick="switchTab('chart')">レンジ表</button>
+</div>
+<div class="content">
+
+  <div id="tab-lookup">
+    <div class="mode-row">
+      <span class="mlabel">シナリオ</span>
+      <button class="mbtn active" onclick="setMode('rfi',this)">RFI（オープン）</button>
+      <button class="mbtn" onclick="setMode('3bet',this)">vs RFI（3-bet判断）</button>
+    </div>
+    <div class="sl">自分のポジション</div>
+    <div class="pos-row" id="my-pos-row"></div>
+    <div class="rsec" id="raiser-sec" style="display:none">
+      <div class="sl">レイザーのポジション</div>
+      <div class="pos-row" id="raiser-row"></div>
+    </div>
+    <div class="cards-grid">
+      <div>
+        <div class="sl">1枚目</div>
+        <div class="rank-row" id="rr1"></div>
+        <div class="suit-row">
+          <button class="sb" onclick="selSuit(1,'s')">♠</button>
+          <button class="sb red" onclick="selSuit(1,'h')">♥</button>
+          <button class="sb red" onclick="selSuit(1,'d')">♦</button>
+          <button class="sb" onclick="selSuit(1,'c')">♣</button>
+        </div>
+        <div id="c1d"><div class="cd empty">?</div></div>
+      </div>
+      <div>
+        <div class="sl">2枚目</div>
+        <div class="rank-row" id="rr2"></div>
+        <div class="suit-row">
+          <button class="sb" onclick="selSuit(2,'s')">♠</button>
+          <button class="sb red" onclick="selSuit(2,'h')">♥</button>
+          <button class="sb red" onclick="selSuit(2,'d')">♦</button>
+          <button class="sb" onclick="selSuit(2,'c')">♣</button>
+        </div>
+        <div id="c2d"><div class="cd empty">?</div></div>
+      </div>
+    </div>
+    <div class="aarea" id="aarea"><span class="aph">シナリオ・ポジション・カードを選んでください</span></div>
+  </div>
+
+  <div id="tab-chart" style="display:none">
+    <div class="mode-row">
+      <span class="mlabel">シナリオ</span>
+      <button class="mbtn active" onclick="setChartMode('rfi',this)">RFI</button>
+      <button class="mbtn" onclick="setChartMode('3bet',this)">vs RFI（3-bet）</button>
+    </div>
+    <div class="sl" id="cml">ポジション</div>
+    <div class="pos-row" id="chart-my-row"></div>
+    <div class="rsec" id="chart-raiser-sec" style="display:none">
+      <div class="sl">レイザーのポジション</div>
+      <div class="pos-row" id="chart-raiser-row"></div>
+    </div>
+    <div class="legend" id="legend"></div>
+    <div class="rg" id="rg"></div>
+  </div>
+</div>
+
+<script>
+const R=['A','K','Q','J','T','9','8','7','6','5','4','3','2'];
+const SC={s:'♠',h:'♥',d:'♦',c:'♣'};
+const REDSUIT=['h','d'];
+const POS=['UTG','UTG+1','UTG+2','LJ','HJ','CO','BTN','SB','BB'];
+
+// RFI ranges based on Amu's note (GTO Wizard 6max 100bb)
+// 赤=レイズ確定, ミックス=どちらでもOK
+// note: UTG→LJ, HJ→HJ, CO→CO, BTN→BTN, SB→SB (9max mapping)
+// Source: https://note.com/goole/n/n0848d4ac675f
+const RFI={
+  // 9max EP positions (tighter than LJ, not in note)
+  UTG:['AA','KK','QQ','JJ','TT','99','88','77','66',
+    'AKs','AQs','AJs','ATs','A9s','A8s','A7s','A6s','A5s','A4s','A3s','A2s',
+    'KQs','KJs','KTs','K9s','QJs','QTs','JTs','T9s','98s',
+    'AKo','AQo','AJo'],
+  'UTG+1':['AA','KK','QQ','JJ','TT','99','88','77','66',
+    'AKs','AQs','AJs','ATs','A9s','A8s','A7s','A6s','A5s','A4s','A3s','A2s',
+    'KQs','KJs','KTs','K9s','QJs','QTs','Q9s','JTs','J9s','T9s','98s',
+    'AKo','AQo','AJo','ATo','KQo'],
+  'UTG+2':['AA','KK','QQ','JJ','TT','99','88','77','66',
+    'AKs','AQs','AJs','ATs','A9s','A8s','A7s','A6s','A5s','A4s','A3s','A2s',
+    'KQs','KJs','KTs','K9s','QJs','QTs','Q9s','JTs','J9s','T9s','T8s','98s',
+    'AKo','AQo','AJo','ATo','KQo','KJo'],
+  // LJ = note UTG (赤のみ)
+  LJ:['AA','KK','QQ','JJ','TT','99','88','77','66','55','44','33','22',
+    'AKs','AQs','AJs','ATs','A9s','A8s','A7s','A6s','A5s','A4s','A3s','A2s',
+    'KQs','KJs','KTs','K9s',
+    'QJs','QTs','Q9s',
+    'JTs','J9s',
+    'T9s','98s',
+    'AKo','AQo','AJo','ATo','KQo','KJo'],
+  // HJ = note HJ (赤のみ)
+  HJ:['AA','KK','QQ','JJ','TT','99','88',
+    'AKs','AQs','AJs','ATs','A9s','A8s','A7s','A6s','A5s','A4s','A3s','A2s',
+    'KQs','KJs','KTs','K9s','K8s',
+    'QJs','QTs','Q9s','Q8s',
+    'JTs','J9s','J8s',
+    'T9s','T8s','98s',
+    'AKo','AQo','AJo','ATo','KQo','KJo'],
+  // CO = note CO (赤のみ)
+  CO:['AA','KK','QQ','JJ','TT','99','88',
+    'AKs','AQs','AJs','ATs','A9s','A8s','A7s','A6s','A5s','A4s','A3s','A2s',
+    'KQs','KJs','KTs','K9s','K8s','K7s','K6s','K5s','K4s','K3s','K2s',
+    'QJs','QTs','Q9s','Q8s','Q7s',
+    'JTs','J9s','J8s','J7s',
+    'T9s','T8s','T7s',
+    '98s','97s','87s',
+    'AKo','AQo','AJo','ATo','A9o','A5o',
+    'KQo','KJo'],
+  // BTN = note BTN (赤のみ)
+  BTN:['AA','KK','QQ','JJ','TT','99','88','77','66','55','44','33','22',
+    'AKs','AQs','AJs','ATs','A9s','A8s','A7s','A6s','A5s','A4s','A3s','A2s',
+    'KQs','KJs','KTs','K9s','K8s','K7s','K6s','K5s','K4s','K3s','K2s',
+    'QJs','QTs','Q9s','Q8s','Q7s','Q6s',
+    'JTs','J9s','J8s','J7s','J6s','J5s',
+    'T9s','T8s','T7s','T6s',
+    '98s','97s','96s','87s','86s','85s','76s','75s','65s',
+    'AKo','AQo','AJo','ATo','A9o','A8o','A7o',
+    'KQo','KJo','KTo','K9o','QJo','QTo'],
+  // SB = note SB (赤/緑=レイズ確定扱い)
+  SB:['AA','KK','QQ','JJ','TT','99','88','77','66','55','44','33','22',
+    'AKs','AQs','AJs','ATs','A9s','A8s','A7s','A6s','A5s','A4s','A3s','A2s',
+    'KQs','KJs','KTs','K9s','K8s','K7s','K6s','K5s',
+    'QJs','QTs','Q9s','Q8s','Q7s','Q6s','Q5s',
+    'JTs','J9s','J8s','J7s','J6s','J5s',
+    'T9s','T8s','T7s','T6s',
+    '98s','97s','96s','87s','86s','85s','76s','75s','65s',
+    'AKo','AQo','AJo','ATo','A9o','A8o','A7o','A6o','A5o','A4o',
+    'KQo','KJo','KTo','QJo'],
+  BB:[]
+};
+
+// ミックスレンジ（赤青混在 = どちらでもOK）
+const RFI_MIX={
+  UTG:[],
+  'UTG+1':[],
+  'UTG+2':[],
+  // LJ: KToがミックス
+  LJ:['KTo'],
+  // HJ: 低ポケット77-22 + A9oがミックス
+  HJ:['77','66','55','44','33','22','A9o'],
+  // CO: 低ポケット77-22 + A8o + KToがミックス
+  CO:['77','66','55','44','33','22','A8o','KTo'],
+  // BTN: Q5s, J4s, A6o, Q9oがミックス
+  BTN:['Q5s','J4s','A6o','Q9o'],
+  // SB: K4s-K2s, Q4s, J4s, A3o, K9oがミックス
+  SB:['K4s','K3s','K2s','Q4s','J4s','A3o','K9o'],
+  BB:[]
+};
+
+// 3-bet ranges: bet=3-bet, call=call (BB only)
+const TB={
+  'UTG+1':{UTG:{bet:['AA','KK','QQ','AKs','AKo'],call:[]}},
+  'UTG+2':{
+    UTG:{bet:['AA','KK','QQ','AKs','AKo'],call:[]},
+    'UTG+1':{bet:['AA','KK','QQ','AKs','AKo'],call:[]}
+  },
+  LJ:{
+    UTG:{bet:['AA','KK','QQ','AKs','AKo'],call:[]},
+    'UTG+1':{bet:['AA','KK','QQ','AKs','AKo'],call:[]},
+    'UTG+2':{bet:['AA','KK','QQ','AKs','AKo'],call:[]}
+  },
+  HJ:{
+    UTG:{bet:['AA','KK','QQ','AKs','AQs','A5s','AKo'],call:[]},
+    'UTG+1':{bet:['AA','KK','QQ','AKs','AQs','A5s','AKo'],call:[]},
+    'UTG+2':{bet:['AA','KK','QQ','AKs','AQs','A5s','AKo'],call:[]},
+    LJ:{bet:['AA','KK','QQ','AKs','AQs','A5s','AKo'],call:[]}
+  },
+  CO:{
+    UTG:{bet:['AA','KK','QQ','AKs','AQs','A5s','A4s','AKo','AQo'],call:[]},
+    'UTG+1':{bet:['AA','KK','QQ','AKs','AQs','A5s','A4s','AKo','AQo'],call:[]},
+    'UTG+2':{bet:['AA','KK','QQ','AKs','AQs','A5s','A4s','AKo','AQo'],call:[]},
+    LJ:{bet:['AA','KK','QQ','JJ','AKs','AQs','A5s','A4s','KQs','AKo','AQo'],call:[]},
+    HJ:{bet:['AA','KK','QQ','JJ','AKs','AQs','A5s','A4s','KQs','AKo','AQo'],call:[]}
+  },
+  BTN:{
+    UTG:{bet:['AA','KK','QQ','AKs','AQs','A5s','A4s','AKo','AQo'],call:[]},
+    'UTG+1':{bet:['AA','KK','QQ','AKs','AQs','A5s','A4s','AKo','AQo'],call:[]},
+    'UTG+2':{bet:['AA','KK','QQ','AKs','AQs','A5s','A4s','AKo','AQo'],call:[]},
+    LJ:{bet:['AA','KK','QQ','JJ','AKs','AQs','AJs','A5s','A4s','KQs','AKo','AQo'],call:[]},
+    HJ:{bet:['AA','KK','QQ','JJ','AKs','AQs','AJs','A5s','A4s','K9s','KQs','AKo','AQo','AJo'],call:[]},
+    CO:{bet:['AA','KK','QQ','JJ','TT','AKs','AQs','AJs','ATs','A5s','A4s','A3s','K9s','KQs','Q9s','J9s','T8s','98s','87s','76s','65s','AKo','AQo','AJo','KQo'],call:[]}
+  },
+  SB:{
+    UTG:{bet:['AA','KK','QQ','AKs','AQs','A5s','A4s','AKo','AQo'],call:[]},
+    'UTG+1':{bet:['AA','KK','QQ','AKs','AQs','A5s','A4s','AKo','AQo'],call:[]},
+    'UTG+2':{bet:['AA','KK','QQ','AKs','AQs','A5s','A4s','AKo','AQo'],call:[]},
+    LJ:{bet:['AA','KK','QQ','JJ','AKs','AQs','AJs','A5s','A4s','KQs','AKo','AQo','AJo'],call:[]},
+    HJ:{bet:['AA','KK','QQ','JJ','AKs','AQs','AJs','A5s','A4s','KQs','AKo','AQo','AJo'],call:[]},
+    CO:{bet:['AA','KK','QQ','JJ','TT','AKs','AQs','AJs','A5s','A4s','A3s','KQs','Q9s','J9s','T8s','87s','AKo','AQo','AJo','KQo'],call:[]},
+    BTN:{bet:['AA','KK','QQ','JJ','TT','99','AKs','AQs','AJs','ATs','A9s','A5s','A4s','A3s','A2s','KQs','KJs','Q9s','J9s','T8s','97s','87s','76s','65s','AKo','AQo','AJo','ATo','KQo','KJo'],call:[]}
+  },
+  BB:{
+    UTG:{
+      bet:['AA','KK','QQ','JJ','AKs','AQs','AJs','A5s','A4s','KQs','AKo','AQo'],
+      call:['TT','99','88','77','66','55','44','33','22','ATs','A9s','A8s','A7s','A6s','A3s','A2s','KJs','KTs','K9s','QJs','QTs','Q9s','JTs','J9s','T9s','T8s','98s','97s','87s','86s','76s','75s','65s','AJo','ATo','KQo','KJo']
+    },
+    'UTG+1':{
+      bet:['AA','KK','QQ','JJ','AKs','AQs','AJs','A5s','A4s','KQs','AKo','AQo'],
+      call:['TT','99','88','77','66','55','44','33','22','ATs','A9s','A8s','A7s','A6s','A3s','A2s','KJs','KTs','K9s','QJs','QTs','Q9s','JTs','J9s','T9s','T8s','98s','87s','76s','65s','AJo','ATo','KQo','KJo']
+    },
+    'UTG+2':{
+      bet:['AA','KK','QQ','JJ','AKs','AQs','AJs','A5s','A4s','KQs','AKo','AQo'],
+      call:['TT','99','88','77','66','55','44','33','22','ATs','A9s','A8s','A7s','A6s','A3s','A2s','KJs','KTs','K9s','QJs','QTs','Q9s','JTs','J9s','T9s','98s','87s','76s','AJo','ATo','KQo','KJo']
+    },
+    LJ:{
+      bet:['AA','KK','QQ','JJ','AKs','AQs','AJs','A5s','A4s','KQs','AKo','AQo','AJo'],
+      call:['TT','99','88','77','66','55','44','33','22','ATs','A9s','A8s','A7s','A6s','A3s','A2s','KJs','KTs','K9s','QJs','QTs','Q9s','JTs','J9s','T9s','98s','87s','76s','65s','ATo','KQo','KJo']
+    },
+    HJ:{
+      bet:['AA','KK','QQ','JJ','TT','AKs','AQs','AJs','A5s','A4s','A3s','KQs','AKo','AQo','AJo'],
+      call:['99','88','77','66','55','44','33','22','ATs','A9s','A8s','A7s','A6s','A2s','KJs','KTs','K9s','QJs','QTs','Q9s','JTs','J9s','T9s','98s','87s','76s','65s','ATo','KQo','KJo']
+    },
+    CO:{
+      bet:['AA','KK','QQ','JJ','TT','AKs','AQs','AJs','ATs','A5s','A4s','A3s','KQs','Q9s','J9s','T8s','87s','AKo','AQo','AJo'],
+      call:['99','88','77','66','55','44','33','22','A9s','A8s','A7s','A6s','A2s','KJs','KTs','K9s','QJs','QTs','JTs','J9s','T9s','98s','97s','76s','65s','ATo','KQo','KJo','KTo','QJo']
+    },
+    BTN:{
+      bet:['AA','KK','QQ','JJ','TT','99','AKs','AQs','AJs','ATs','A9s','A5s','A4s','A3s','KQs','KJs','Q9s','J9s','T8s','97s','87s','76s','65s','54s','AKo','AQo','AJo','ATo'],
+      call:['88','77','66','55','44','33','22','A8s','A7s','A6s','A2s','KTs','K9s','QJs','QTs','JTs','T9s','98s','86s','75s','64s','A9o','KQo','KJo','KTo','QJo','QTo','JTo']
+    },
+    SB:{
+      bet:['AA','KK','QQ','JJ','TT','99','88','AKs','AQs','AJs','ATs','A5s','A4s','A3s','KQs','KJs','Q9s','J9s','T8s','97s','87s','76s','65s','AKo','AQo','AJo','ATo','A9o'],
+      call:['77','66','55','44','33','22','A9s','A8s','A7s','A6s','A2s','KTs','K9s','QJs','QTs','JTs','T9s','98s','86s','75s','64s','KQo','KJo','KTo','QJo','QTo','JTo','T9o']
+    }
+  }
+};
+
+let mode='rfi', chartMode='rfi';
+let st={myPos:null,raiserPos:null,r1:null,s1:null,r2:null,s2:null};
+let cs={myPos:'UTG',raiserPos:null};
+
+function hk(r1,s1,r2,s2){
+  const i1=R.indexOf(r1),i2=R.indexOf(r2);
+  if(i1===i2)return r1+r2;
+  const[h,l]=i1<i2?[r1,r2]:[r2,r1];
+  return h+l+(s1===s2?'s':'o');
+}
+function rfiAct(pos,k){
+  if(!pos||pos==='BB')return'bb';
+  if(RFI[pos]&&RFI[pos].includes(k))return'raise';
+  if(RFI_MIX[pos]&&RFI_MIX[pos].includes(k))return'mix';
+  return'fold';
+}
+function tbAct(mp,rp,k){
+  const e=TB[mp]&&TB[mp][rp];
+  if(!e)return'fold';
+  if(e.bet.includes(k))return'threebet';
+  if(e.call.includes(k))return'call';
+  return'fold';
+}
+
+function setMode(m,btn){
+  mode=m;
+  document.querySelectorAll('#tab-lookup .mbtn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('raiser-sec').style.display=m==='3bet'?'block':'none';
+  st.raiserPos=null;
+  buildMyPos(); buildRaiser(); upd();
+}
+function setChartMode(m,btn){
+  chartMode=m;
+  document.querySelectorAll('#tab-chart .mbtn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('chart-raiser-sec').style.display=m==='3bet'?'block':'none';
+  cs.raiserPos=null;
+  buildChartMyPos(); buildChartRaiser(); renderGrid();
+}
+
+function buildMyPos(){
+  const el=document.getElementById('my-pos-row');el.innerHTML='';
+  const ps=mode==='rfi'?POS:POS.slice(1);
+  ps.forEach(p=>{
+    const b=document.createElement('button');
+    b.className='pb'+(st.myPos===p?' active':'');b.textContent=p;
+    b.onclick=()=>{st.myPos=p;st.raiserPos=null;buildMyPos();buildRaiser();upd();};
+    el.appendChild(b);
+  });
+}
+function buildRaiser(){
+  const el=document.getElementById('raiser-row');el.innerHTML='';
+  if(!st.myPos)return;
+  const mi=POS.indexOf(st.myPos);
+  POS.slice(0,mi).filter(p=>p!=='BB').forEach(p=>{
+    const b=document.createElement('button');
+    b.className='pb'+(st.raiserPos===p?' active-g':'');b.textContent=p;
+    b.onclick=()=>{st.raiserPos=p;buildRaiser();upd();};
+    el.appendChild(b);
+  });
+}
+function buildChartMyPos(){
+  const el=document.getElementById('chart-my-row');el.innerHTML='';
+  const ps=chartMode==='rfi'?POS.slice(0,8):POS.slice(1);
+  if(!ps.includes(cs.myPos))cs.myPos=ps[0];
+  ps.forEach(p=>{
+    const b=document.createElement('button');
+    b.className='pb'+(cs.myPos===p?' active':'');b.textContent=p;
+    b.onclick=()=>{cs.myPos=p;cs.raiserPos=null;buildChartMyPos();buildChartRaiser();renderGrid();};
+    el.appendChild(b);
+  });
+}
+function buildChartRaiser(){
+  const el=document.getElementById('chart-raiser-row');el.innerHTML='';
+  if(!cs.myPos)return;
+  const mi=POS.indexOf(cs.myPos);
+  POS.slice(0,mi).filter(p=>p!=='BB').forEach(p=>{
+    const b=document.createElement('button');
+    b.className='pb'+(cs.raiserPos===p?' active-g':'');b.textContent=p;
+    b.onclick=()=>{cs.raiserPos=p;buildChartRaiser();renderGrid();};
+    el.appendChild(b);
+  });
+}
+function buildRankBtns(n){
+  const el=document.getElementById('rr'+n);
+  R.forEach(r=>{
+    const b=document.createElement('button');
+    b.className='rb';b.id='rk'+n+r;b.textContent=r;
+    b.onclick=()=>selRank(n,r);el.appendChild(b);
+  });
+}
+function selRank(n,r){
+  if(n===1)st.r1=r;else st.r2=r;
+  R.forEach(x=>{const e=document.getElementById('rk'+n+x);if(e)e.classList.remove('active');});
+  const e=document.getElementById('rk'+n+r);if(e)e.classList.add('active');
+  updCard(n);upd();
+}
+function selSuit(n,s){
+  if(n===1)st.s1=s;else st.s2=s;
+  const btns=document.querySelectorAll(n===1?'#tab-lookup .cards-grid>div:first-child .suit-row .sb':'#tab-lookup .cards-grid>div:last-child .suit-row .sb');
+  btns.forEach((b,i)=>b.classList.toggle('active',i===(['s','h','d','c'].indexOf(s))));
+  updCard(n);upd();
+}
+function updCard(n){
+  const r=n===1?st.r1:st.r2,s=n===1?st.s1:st.s2;
+  const el=document.getElementById('c'+n+'d');
+  if(!r){el.innerHTML='<div class="cd empty">?</div>';return;}
+  const sc2=s?SC[s]:'';const isR=s&&REDSUIT.includes(s);
+  el.innerHTML=`<div class="cd${isR?' rc2':''}"><span>${r}</span><span class="sc">${sc2}</span></div>`;
+}
+function upd(){
+  const el=document.getElementById('aarea');
+  if(!st.myPos||!st.r1||!st.r2){el.innerHTML='<span class="aph">ポジションとカードを選んでください</span>';return;}
+  if(mode==='3bet'&&!st.raiserPos){el.innerHTML='<span class="aph">レイザーのポジションも選んでください</span>';return;}
+  const k=hk(st.r1,st.s1||'s',st.r2,st.s2||'h');
+  const action=mode==='rfi'?rfiAct(st.myPos,k):tbAct(st.myPos,st.raiserPos,k);
+  const c1=st.s1&&REDSUIT.includes(st.s1)?'#e03030':'var(--text)';
+  const c2=st.s2&&REDSUIT.includes(st.s2)?'#e03030':'var(--text)';
+  const cs2=`<span style="color:${c1}">${st.r1}${st.s1?SC[st.s1]:''}</span> <span style="color:${c2}">${st.r2}${st.s2?SC[st.s2]:''}</span>`;
+  const ctx=mode==='3bet'?`${st.myPos} vs ${st.raiserPos} open`:`${st.myPos} RFI`;
+  const labels={raise:'RAISE ↑',mix:'RAISE* ↑?',threebet:'3-BET ↑↑',call:'CALL →',fold:'FOLD ✕',bb:'— RFI なし'};
+  const descs={raise:'オープンレイズ推奨',mix:'どちらでもOK（ミックス）',threebet:'3-ベット推奨',call:'コール推奨 (BB)',fold:'フォールド推奨',bb:'BBはRFI対象外'};
+  el.innerHTML=`<div class="ai"><div class="hl">${ctx} — ${k}</div><div style="font-size:21px">${cs2}</div><div class="abadge ${action}">${labels[action]}</div><div class="adesc">${descs[action]}</div></div>`;
+}
+function renderGrid(){
+  const g=document.getElementById('rg'),leg=document.getElementById('legend');
+  if(chartMode==='rfi'){
+    const pos=cs.myPos;
+    if(pos==='BB'){g.innerHTML='<p style="color:var(--muted);font-size:13px;font-family:\'DM Mono\',monospace;padding:12px 0">BBはRFI対象外です。</p>';leg.innerHTML='';return;}
+    leg.innerHTML=`<div class="li"><div class="ld" style="background:var(--red)"></div>レイズ</div><div class="li"><div class="ld" style="background:var(--amber)"></div>ミックス（どちらでもOK）</div><div class="li"><div class="ld" style="background:var(--surface2);border:.5px solid var(--border2)"></div>フォールド</div>`;
+    let h='';
+    R.forEach((r1,i)=>R.forEach((r2,j)=>{
+      const k2=i===j?r1+r2:(i<j?r1+r2+'s':r2+r1+'o');
+      const a=rfiAct(pos,k2);
+      const cls=a==='raise'?'raise':a==='mix'?'mix':'fold';
+      h+=`<div class="rc ${cls}" title="${k2}">${k2.length>3?k2.slice(0,3):k2}</div>`;
+    }));
+    g.innerHTML=h;
+  } else {
+    if(!cs.raiserPos){g.innerHTML='<p style="color:var(--muted);font-size:13px;font-family:\'DM Mono\',monospace;padding:12px 0">レイザーのポジションを選んでください。</p>';leg.innerHTML='';return;}
+    const isBB=cs.myPos==='BB';
+    leg.innerHTML=`<div class="li"><div class="ld" style="background:var(--amber)"></div>3-ベット</div>${isBB?'<div class="li"><div class="ld" style="background:var(--blue)"></div>コール</div>':''}<div class="li"><div class="ld" style="background:var(--surface2);border:.5px solid var(--border2)"></div>フォールド</div>`;
+    let h='';
+    R.forEach((r1,i)=>R.forEach((r2,j)=>{
+      const k2=i===j?r1+r2:(i<j?r1+r2+'s':r2+r1+'o');
+      const a=tbAct(cs.myPos,cs.raiserPos,k2);
+      const cls=a==='threebet'?'threebet':a==='call'?'call':'fold';
+      h+=`<div class="rc ${cls}" title="${k2}">${k2.length>3?k2.slice(0,3):k2}</div>`;
+    }));
+    g.innerHTML=h;
+  }
+}
+function switchTab(t){
+  document.getElementById('tab-lookup').style.display=t==='lookup'?'':'none';
+  document.getElementById('tab-chart').style.display=t==='chart'?'':'none';
+  document.querySelectorAll('.tab').forEach((b,i)=>b.classList.toggle('active',(i===0&&t==='lookup')||(i===1&&t==='chart')));
+  if(t==='chart'){buildChartMyPos();buildChartRaiser();renderGrid();}
+}
+buildMyPos();buildRankBtns(1);buildRankBtns(2);
+cs.myPos='UTG';buildChartMyPos();renderGrid();
+</script>
+</body>
+</html>
