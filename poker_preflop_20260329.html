@@ -70,6 +70,17 @@
   .mbtn.active{background:var(--surface2);color:var(--text);border-color:var(--text);}
   .rsec{margin-bottom:18px;}
   @media(max-width:600px){header,.tabs,.content{padding-left:14px;padding-right:14px;}.cards-grid{grid-template-columns:1fr;}.rc{font-size:7px;}}
+  .fw-pi{display:flex;flex-direction:column;align-items:center;padding:10px 8px 12px;cursor:default;opacity:.3;flex:1;border-bottom:2px solid transparent;text-align:center;transition:opacity .15s;}
+  .fw-pi.active{opacity:1;border-bottom-color:var(--accent);}
+  .fw-pi.done{opacity:.65;border-bottom-color:var(--green);cursor:pointer;}
+  .fw-pi.done:hover{opacity:.85;}
+  .fw-num{font-family:'DM Mono',monospace;font-size:16px;font-weight:500;color:var(--text);line-height:1;}
+  .fw-lbl{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:4px;}
+  .fw-sum{background:var(--surface2);border-radius:6px;padding:10px 14px;font-family:'DM Mono',monospace;font-size:12px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-top:16px;margin-bottom:0;}
+  .fw-nb{font-family:'DM Mono',monospace;font-size:12px;padding:9px 18px;background:none;border:0.5px solid var(--border2);border-radius:4px;color:var(--muted);cursor:pointer;transition:color .1s;}
+  .fw-nb:hover{color:var(--text);}
+  .fw-xb{font-family:'DM Mono',monospace;font-size:12px;letter-spacing:.05em;padding:9px 22px;background:var(--accent);border:none;border-radius:4px;color:#fff;cursor:pointer;opacity:.35;transition:opacity .15s;}
+  .fw-xb:not([disabled]){opacity:1;cursor:pointer;}
 </style>
 </head>
 <body>
@@ -139,152 +150,126 @@
   <!-- FLOP TAB -->
 
   <div id="tab-flop" style="display:none">
-
-```
-<!-- ① 共通設定：ポット種別 + ポジション（常に表示） -->
-<div style="background:var(--surface2);border-radius:8px;padding:14px 16px;margin-bottom:20px;display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-  <div>
-    <div class="sl">ポット種別</div>
-    <div class="pos-row" style="margin-bottom:0">
-      <button class="pb active" id="fp-srp" onclick="setFlopPot('srp',this)">SRP</button>
-      <button class="pb" id="fp-3bet" onclick="setFlopPot('3bet',this)">3betポット</button>
+    <!-- ウィザード進捗バー -->
+    <div style="display:flex;border-bottom:0.5px solid var(--border);">
+      <div class="fw-pi active" id="fwpi1" onclick="fwGoStep(1)"><span class="fw-num">01</span><span class="fw-lbl">ホールカード</span></div>
+      <div class="fw-pi" id="fwpi2" onclick="fwGoStep(2)"><span class="fw-num">02</span><span class="fw-lbl">シチュエーション</span></div>
+      <div class="fw-pi" id="fwpi3" onclick="fwGoStep(3)"><span class="fw-num">03</span><span class="fw-lbl">フロップ</span></div>
+      <div class="fw-pi" id="fwpi4" onclick="fwGoStep(4)"><span class="fw-num">04</span><span class="fw-lbl">CB戦略</span></div>
     </div>
-  </div>
-  <div>
-    <div class="sl">自分のポジション</div>
-    <div class="pos-row" style="margin-bottom:0">
-      <button class="pb active" id="fp-ip" onclick="setFlopPos('ip',this)">IP（有利）</button>
-      <button class="pb" id="fp-oop" onclick="setFlopPos('oop',this)">OOP（不利）</button>
-    </div>
-  </div>
-</div>
+    <!-- 選択サマリー -->
+    <div class="fw-sum" id="fw-sum" style="display:none;"></div>
 
-<!-- ② モード切り替えタブ -->
-<div style="display:flex;border-bottom:0.5px solid var(--border);margin-bottom:20px;">
-  <button id="fm-card" style="padding:10px 20px;font-family:'DM Mono',monospace;font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--text);background:none;border:none;border-bottom:2px solid var(--accent);cursor:pointer;" onclick="setFlopMode('card')">カード入力</button>
-  <button id="fm-tex" style="padding:10px 20px;font-family:'DM Mono',monospace;font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;" onclick="setFlopMode('tex')">テクスチャ選択</button>
-</div>
-
-<!-- ③-A カード入力モード -->
-<div id="flop-mode-card">
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
-    <div>
-      <div class="sl">ホールカード（2枚）</div>
-      <div class="rank-row" id="fh-rr1"></div>
-      <div class="suit-row" style="margin-bottom:6px;">
-        <button class="sb" onclick="selFlopCard(1,'s')">♠</button>
-        <button class="sb red" onclick="selFlopCard(1,'h')">♥</button>
-        <button class="sb red" onclick="selFlopCard(1,'d')">♦</button>
-        <button class="sb" onclick="selFlopCard(1,'c')">♣</button>
+    <!-- STEP 1: ホールカード -->
+    <div id="fw-s1" style="margin-top:20px;">
+      <div class="sl" style="margin-bottom:14px;">STEP 1 — ホールカード2枚を選択（ランク→スート）</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+        <div>
+          <div class="sl">1枚目</div>
+          <div class="rank-row" id="fwrr1"></div>
+          <div class="suit-row" style="margin-top:6px;margin-bottom:10px;" id="fwsr1">
+            <button class="sb" onclick="fwHoleSuit(0,'s')">♠</button>
+            <button class="sb red" onclick="fwHoleSuit(0,'h')">♥</button>
+            <button class="sb red" onclick="fwHoleSuit(0,'d')">♦</button>
+            <button class="sb" onclick="fwHoleSuit(0,'c')">♣</button>
+          </div>
+          <div id="fwhd1"><div class="cd empty">?</div></div>
+        </div>
+        <div>
+          <div class="sl">2枚目</div>
+          <div class="rank-row" id="fwrr2"></div>
+          <div class="suit-row" style="margin-top:6px;margin-bottom:10px;" id="fwsr2">
+            <button class="sb" onclick="fwHoleSuit(1,'s')">♠</button>
+            <button class="sb red" onclick="fwHoleSuit(1,'h')">♥</button>
+            <button class="sb red" onclick="fwHoleSuit(1,'d')">♦</button>
+            <button class="sb" onclick="fwHoleSuit(1,'c')">♣</button>
+          </div>
+          <div id="fwhd2"><div class="cd empty">?</div></div>
+        </div>
       </div>
-      <div class="rank-row" id="fh-rr2"></div>
-      <div class="suit-row" style="margin-bottom:10px;">
-        <button class="sb" onclick="selFlopCard(2,'s')">♠</button>
-        <button class="sb red" onclick="selFlopCard(2,'h')">♥</button>
-        <button class="sb red" onclick="selFlopCard(2,'d')">♦</button>
-        <button class="sb" onclick="selFlopCard(2,'c')">♣</button>
-      </div>
-      <div style="display:flex;gap:6px;" id="fh-hole-disp">
-        <div class="cd empty">?</div><div class="cd empty">?</div>
+      <div style="display:flex;justify-content:flex-end;">
+        <button class="fw-xb" id="fwb1" onclick="fwNext(1)" disabled>次へ →</button>
       </div>
     </div>
-    <div>
-      <div class="sl">フロップ（3枚）</div>
-      <div class="rank-row" id="fh-rr3"></div>
-      <div class="suit-row" style="margin-bottom:6px;">
-        <button class="sb" onclick="selFlopCard(3,'s')">♠</button>
-        <button class="sb red" onclick="selFlopCard(3,'h')">♥</button>
-        <button class="sb red" onclick="selFlopCard(3,'d')">♦</button>
-        <button class="sb" onclick="selFlopCard(3,'c')">♣</button>
+
+    <!-- STEP 2: シチュエーション -->
+    <div id="fw-s2" style="display:none;margin-top:20px;">
+      <div class="sl" style="margin-bottom:14px;">STEP 2 — シチュエーション選択</div>
+      <div class="sl">ポット種別</div>
+      <div class="pos-row">
+        <button class="pb active" id="fwpot-srp" onclick="fwPot('srp',this)">SRP</button>
+        <button class="pb" id="fwpot-3bet" onclick="fwPot('3bet',this)">3betポット</button>
       </div>
-      <div class="rank-row" id="fh-rr4"></div>
-      <div class="suit-row" style="margin-bottom:6px;">
-        <button class="sb" onclick="selFlopCard(4,'s')">♠</button>
-        <button class="sb red" onclick="selFlopCard(4,'h')">♥</button>
-        <button class="sb red" onclick="selFlopCard(4,'d')">♦</button>
-        <button class="sb" onclick="selFlopCard(4,'c')">♣</button>
+      <div class="sl">自分のポジション</div>
+      <div class="pos-row" id="fw-mypr"></div>
+      <div class="sl">相手のポジション</div>
+      <div class="pos-row" id="fw-oppr"></div>
+      <div id="fw-ipd" style="display:none;font-family:'DM Mono',monospace;font-size:13px;padding:10px 14px;background:var(--surface2);border-radius:6px;margin-bottom:16px;line-height:1.8;"></div>
+      <div style="display:flex;justify-content:space-between;margin-top:4px;">
+        <button class="fw-nb" onclick="fwBack(2)">← 戻る</button>
+        <button class="fw-xb" id="fwb2" onclick="fwNext(2)" disabled>次へ →</button>
       </div>
-      <div class="rank-row" id="fh-rr5"></div>
-      <div class="suit-row" style="margin-bottom:10px;">
-        <button class="sb" onclick="selFlopCard(5,'s')">♠</button>
-        <button class="sb red" onclick="selFlopCard(5,'h')">♥</button>
-        <button class="sb red" onclick="selFlopCard(5,'d')">♦</button>
-        <button class="sb" onclick="selFlopCard(5,'c')">♣</button>
+    </div>
+
+    <!-- STEP 3: フロップ -->
+    <div id="fw-s3" style="display:none;margin-top:20px;">
+      <div class="sl" style="margin-bottom:14px;">STEP 3 — フロップ3枚を選択（ランク→スート）</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;">
+        <div>
+          <div class="sl">1枚目</div>
+          <div class="rank-row" id="fwrr3"></div>
+          <div class="suit-row" style="margin-top:6px;margin-bottom:8px;" id="fwsr3">
+            <button class="sb" onclick="fwFlopSuit(0,'s')">♠</button>
+            <button class="sb red" onclick="fwFlopSuit(0,'h')">♥</button>
+            <button class="sb red" onclick="fwFlopSuit(0,'d')">♦</button>
+            <button class="sb" onclick="fwFlopSuit(0,'c')">♣</button>
+          </div>
+          <div id="fwfd1"><div class="cd empty">?</div></div>
+        </div>
+        <div>
+          <div class="sl">2枚目</div>
+          <div class="rank-row" id="fwrr4"></div>
+          <div class="suit-row" style="margin-top:6px;margin-bottom:8px;" id="fwsr4">
+            <button class="sb" onclick="fwFlopSuit(1,'s')">♠</button>
+            <button class="sb red" onclick="fwFlopSuit(1,'h')">♥</button>
+            <button class="sb red" onclick="fwFlopSuit(1,'d')">♦</button>
+            <button class="sb" onclick="fwFlopSuit(1,'c')">♣</button>
+          </div>
+          <div id="fwfd2"><div class="cd empty">?</div></div>
+        </div>
+        <div>
+          <div class="sl">3枚目</div>
+          <div class="rank-row" id="fwrr5"></div>
+          <div class="suit-row" style="margin-top:6px;margin-bottom:8px;" id="fwsr5">
+            <button class="sb" onclick="fwFlopSuit(2,'s')">♠</button>
+            <button class="sb red" onclick="fwFlopSuit(2,'h')">♥</button>
+            <button class="sb red" onclick="fwFlopSuit(2,'d')">♦</button>
+            <button class="sb" onclick="fwFlopSuit(2,'c')">♣</button>
+          </div>
+          <div id="fwfd3"><div class="cd empty">?</div></div>
+        </div>
       </div>
-      <div style="display:flex;gap:6px;" id="fh-board-disp">
+      <div style="display:flex;gap:6px;margin-bottom:20px;" id="fw-bdisp">
         <div class="cd empty">?</div><div class="cd empty">?</div><div class="cd empty">?</div>
       </div>
+      <div style="display:flex;justify-content:space-between;">
+        <button class="fw-nb" onclick="fwBack(3)">← 戻る</button>
+        <button class="fw-xb" id="fwb3" onclick="fwNext(3)" disabled>CB戦略を見る →</button>
+      </div>
     </div>
-  </div>
-  <div class="sl" style="margin-top:4px;">ハンドカテゴリ <span style="color:var(--green);font-size:9px;font-family:'DM Mono',monospace;">AUTO</span></div>
-  <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin-bottom:20px;" id="fhand-grid-card">
-    <button class="pb" onclick="setFlopHandCard('nuts')">ナッツ<span style="font-size:9px;display:block;color:var(--muted)">セット以上</span></button>
-    <button class="pb" onclick="setFlopHandCard('2pair_str')">強2ペア<span style="font-size:9px;display:block;color:var(--muted)">トップ2等</span></button>
-    <button class="pb" onclick="setFlopHandCard('2pair_weak')">弱2ペア<span style="font-size:9px;display:block;color:var(--muted)">ボトム2等</span></button>
-    <button class="pb" onclick="setFlopHandCard('tptk')">TPTK<span style="font-size:9px;display:block;color:var(--muted)">TP強K</span></button>
-    <button class="pb" onclick="setFlopHandCard('tpwk')">TPWK<span style="font-size:9px;display:block;color:var(--muted)">TP弱K</span></button>
-    <button class="pb" onclick="setFlopHandCard('mp')">ミドルペア<span style="font-size:9px;display:block;color:var(--muted)">2枚目</span></button>
-    <button class="pb" onclick="setFlopHandCard('bp')">ボトムペア<span style="font-size:9px;display:block;color:var(--muted)">3枚目</span></button>
-    <button class="pb" onclick="setFlopHandCard('op')">オーバーペア<span style="font-size:9px;display:block;color:var(--muted)">ボード全超え</span></button>
-    <button class="pb" onclick="setFlopHandCard('nfd')">NFD<span style="font-size:9px;display:block;color:var(--muted)">ナッツFD</span></button>
-    <button class="pb" onclick="setFlopHandCard('fd')">FD<span style="font-size:9px;display:block;color:var(--muted)">非ナッツFD</span></button>
-    <button class="pb" onclick="setFlopHandCard('oesd')">OESD<span style="font-size:9px;display:block;color:var(--muted)">両面SD</span></button>
-    <button class="pb" onclick="setFlopHandCard('gs')">GS<span style="font-size:9px;display:block;color:var(--muted)">ガットショット</span></button>
-    <button class="pb" onclick="setFlopHandCard('bdfd')">BDFD<span style="font-size:9px;display:block;color:var(--muted)">バックドアFD</span></button>
-    <button class="pb" onclick="setFlopHandCard('air')">エアー<span style="font-size:9px;display:block;color:var(--muted)">完全空振り</span></button>
-  </div>
-</div>
 
-<!-- ③-B テクスチャ選択モード -->
-<div id="flop-mode-tex" style="display:none">
-  <div class="sl">ボードテクスチャ</div>
-  <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-bottom:20px;">
-    <button class="pb active" id="ft-dryhigh" onclick="setFlopTex('dryhigh',this)">
-      <span style="font-size:10px;display:block;color:var(--muted);margin-bottom:2px;">ドライハイ</span>A♠7♥2♣
-    </button>
-    <button class="pb" id="ft-drymid" onclick="setFlopTex('drymid',this)">
-      <span style="font-size:10px;display:block;color:var(--muted);margin-bottom:2px;">ドライミッド</span>9♠5♥2♣
-    </button>
-    <button class="pb" id="ft-wet" onclick="setFlopTex('wet',this)">
-      <span style="font-size:10px;display:block;color:var(--muted);margin-bottom:2px;">ウェット</span>K♠J♥7♦
-    </button>
-    <button class="pb" id="ft-mono" onclick="setFlopTex('mono',this)">
-      <span style="font-size:10px;display:block;color:var(--muted);margin-bottom:2px;">モノトーン</span>K♠8♠4♠
-    </button>
-    <button class="pb" id="ft-paired" onclick="setFlopTex('paired',this)">
-      <span style="font-size:10px;display:block;color:var(--muted);margin-bottom:2px;">ペアボード</span>Q♠Q♣6♦
-    </button>
-    <button class="pb" id="ft-low" onclick="setFlopTex('low',this)">
-      <span style="font-size:10px;display:block;color:var(--muted);margin-bottom:2px;">ローボード</span>6♠5♥4♣
-    </button>
-  </div>
-  <div class="sl">ハンドカテゴリ</div>
-  <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin-bottom:20px;" id="fhand-grid-tex">
-    <button class="pb" onclick="setFlopHandTex('nuts')">ナッツ<span style="font-size:9px;display:block;color:var(--muted)">セット以上</span></button>
-    <button class="pb" onclick="setFlopHandTex('2pair_str')">強2ペア<span style="font-size:9px;display:block;color:var(--muted)">トップ2等</span></button>
-    <button class="pb" onclick="setFlopHandTex('2pair_weak')">弱2ペア<span style="font-size:9px;display:block;color:var(--muted)">ボトム2等</span></button>
-    <button class="pb" onclick="setFlopHandTex('tptk')">TPTK<span style="font-size:9px;display:block;color:var(--muted)">TP強K</span></button>
-    <button class="pb" onclick="setFlopHandTex('tpwk')">TPWK<span style="font-size:9px;display:block;color:var(--muted)">TP弱K</span></button>
-    <button class="pb" onclick="setFlopHandTex('mp')">ミドルペア<span style="font-size:9px;display:block;color:var(--muted)">2枚目</span></button>
-    <button class="pb" onclick="setFlopHandTex('bp')">ボトムペア<span style="font-size:9px;display:block;color:var(--muted)">3枚目</span></button>
-    <button class="pb" onclick="setFlopHandTex('op')">オーバーペア<span style="font-size:9px;display:block;color:var(--muted)">ボード全超え</span></button>
-    <button class="pb" onclick="setFlopHandTex('nfd')">NFD<span style="font-size:9px;display:block;color:var(--muted)">ナッツFD</span></button>
-    <button class="pb" onclick="setFlopHandTex('fd')">FD<span style="font-size:9px;display:block;color:var(--muted)">非ナッツFD</span></button>
-    <button class="pb" onclick="setFlopHandTex('oesd')">OESD<span style="font-size:9px;display:block;color:var(--muted)">両面SD</span></button>
-    <button class="pb" onclick="setFlopHandTex('gs')">GS<span style="font-size:9px;display:block;color:var(--muted)">ガットショット</span></button>
-    <button class="pb" onclick="setFlopHandTex('bdfd')">BDFD<span style="font-size:9px;display:block;color:var(--muted)">バックドアFD</span></button>
-    <button class="pb" onclick="setFlopHandTex('air')">エアー<span style="font-size:9px;display:block;color:var(--muted)">完全空振り</span></button>
-  </div>
-</div>
-
-<!-- ④ 結果表示（共通） -->
-<div id="flop-result" style="background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:22px;min-height:160px;display:flex;align-items:center;justify-content:center;">
-  <span style="color:var(--muted);font-size:13px;font-family:'DM Mono',monospace;">上のモードを選んで入力してください</span>
-</div>
-<div style="margin-top:10px;font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;">
-  出典: <a href="https://blog.gtowizard.com/flop-heuristics-ip-c-betting-in-cash-games/" style="color:var(--blue);">GTO Wizard Blog</a> — Flop Heuristics & C-Bet Sizing
-</div>
-```
+    <!-- STEP 4: 結果 -->
+    <div id="fw-s4" style="display:none;margin-top:20px;">
+      <div class="sl" style="margin-bottom:14px;">STEP 4 — CB戦略</div>
+      <div id="fw-result" style="background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:22px;margin-bottom:16px;min-height:160px;"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <button class="fw-nb" onclick="fwBack(4)">← 戻る</button>
+        <button class="fw-nb" onclick="fwReset()">&#x21BA; 最初から</button>
+      </div>
+      <div style="margin-top:12px;font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;">
+        出典: <a href="https://blog.gtowizard.com/flop-heuristics-ip-c-betting-in-cash-games/" style="color:var(--blue);">GTO Wizard Blog</a> — Flop Heuristics &amp; C-Bet Sizing
+      </div>
+    </div>
 
   </div>
 </div>
@@ -620,676 +605,650 @@ function switchTab(t){
   if(t==='chart'){buildChartMyPos();buildChartRaiser();renderGrid();}
 }
 
-// ===== FLOP STRATEGY =====
+// ===== FLOP WIZARD =====
 // Source: GTO Wizard Blog
-// https://blog.gtowizard.com/flop-heuristics-ip-c-betting-in-cash-games/
-// https://blog.gtowizard.com/the-mechanics-of-c-bet-sizing/
-// https://blog.gtowizard.com/c-betting-oop-in-3-bet-pots/
-//
-// 原則（GTO Wizardブログより）:
-// - レンジアドバンテージ→ベット頻度に影響
-// - ナットアドバンテージ→ベットサイズに影響
-// - ドライボード: 1/3サイズ高頻度（fold equityが低いため大サイズ不要）
-// - ウェットボード: 大サイズ（fold equityが高く、ドローを保護）
-// - 超ウェット/モノトーン: サイズ縮小（両方のレンジにナッツ多数）
-// - ペアボード: 小サイズ高頻度（ナッツが両方のレンジに存在）
-// - OOP 3betポット: SPR低くIP並みに高頻度CBet可
 
-const FLOP={
+const FLOP_DATA={
   srp:{
     ip:{
-      // ドライハイ (A72r, K83r等) — IPがレンジ優位。小サイズ高頻度
       dryhigh:{
-        nuts:      {a:'BET',      s:'1/3',       r:'ドライハイはIPのレンジ優位が最大。fold equityが低いため1/3サイズ高頻度。ナッツは保護不要なので小サイズ。'},
-        op:        {a:'BET/CHECK',s:'1/3',        r:'オーバーペア(KK/QQ on A高)はチェックも多い。AAにブロックされず価値あり。チェックで罠も有効。'},
-        '2pair_str':{a:'BET',     s:'1/3〜1/2',   r:'強2ペアは価値ベット。ドライはサイズ小さめ。'},
-        '2pair_weak':{a:'BET',    s:'1/3',         r:'小サイズ広くベット。ドライは1/3で十分。'},
-        tptk:      {a:'BET',      s:'1/3',         r:'AハイのTPTKはIPが広く持つ。1/3高頻度CBetがGTO Wizard推奨。弱Kixはチェックも多い。'},
-        tpwk:      {a:'BET/CHECK',s:'1/3',         r:'弱キッカーTPはチェックレイズ誘発を避けるためチェック多め。ベットなら1/3。'},
-        mp:        {a:'CHECK',    s:'−',           r:'ミドルペアはチェック。ドライでもOOPのチェックレイズに弱い。'},
-        bp:        {a:'CHECK',    s:'−',           r:'ボトムペアはチェック。価値もなく保護も不要。'},
-        nfd:       {a:'BET',      s:'1/2',         r:'ナッツFDはセミブラフ。ドライでは中サイズ。'},
-        fd:        {a:'CHECK/BET',s:'1/3',         r:'非ナッツFDは頻度でベット。小サイズ。'},
-        oesd:      {a:'CHECK/BET',s:'1/3',         r:'OESDはエクイティ大。チェックorスモールベット。'},
-        gs:        {a:'CHECK',    s:'−',           r:'GS単体はチェック推奨。'},
-        bdfd:      {a:'CHECK/BET',s:'1/3',         r:'BDFDはブラフ候補。高頻度チェックだが選択的に1/3ベット。'},
-        air:       {a:'CHECK',    s:'−',           r:'エアーはチェック。ドライIPはそもそもベット頻度高くブラフは不要。'},
+        nuts:      {a:'BET',      s:'1/3',       r:'ドライハイボードはIPのレンジ優位が最大。fold equityが低いため1/3サイズ高頻度がGTO Wizard推奨。ナットアドバンテージは大きいが相手のミドルハンドが少ないため大サイズは不要。ナッツは保護不要なのでポットを大きくせず広くベット。'},
+        op:        {a:'BET/CHECK',s:'1/3',       r:'AハイのオーバーペアKK/QQはチェックも多い。AAにブロックされず価値があるが、チェックで罠を仕掛けることも有効。ベットするなら1/3でチェックレイズを誘発せず低リスクで価値を取る。'},
+        '2pair_str':{a:'BET',     s:'1/3〜1/2', r:'強2ペアはドライで価値ベット。ターンで改善が少ないのでフロップで価値を取る。ドライはfold equityが低いため中〜小サイズが適切。'},
+        '2pair_weak':{a:'BET',    s:'1/3',       r:'弱2ペアも小サイズで広くベット。ドライボードでは相手がフォールドしなくてもショーダウンバリューがある。1/3で十分。'},
+        tptk:      {a:'BET',      s:'1/3',       r:'AハイのTPTKはIPが広く持つ。GTO Wizard推奨の1/3高頻度CBet。IPのレンジアドバンテージを活かして広くベット。弱いキッカーの場合はチェックを混ぜる。'},
+        tpwk:      {a:'BET/CHECK',s:'1/3',       r:'弱キッカーTPはチェックレイズ誘発リスクがあるためチェック多め。OOPからのチェックレイズに対してコールしにくいため保守的に。ベットするなら1/3。'},
+        mp:        {a:'CHECK',    s:'−',         r:'ミドルペアはチェック。ドライでも価値ベットとして不十分で、チェックレイズに弱い。ポットコントロールを優先してターンで判断。'},
+        bp:        {a:'CHECK',    s:'−',         r:'ボトムペアはチェック。価値もなく保護も不要。ターンまで安価に見てアウツを活かす。'},
+        nfd:       {a:'BET',      s:'1/2',       r:'ナッツFDはセミブラフとして最強クラス。フォールドエクイティ+フラッシュ完成時の最大価値の両方を持つ。ドライでは中サイズの1/2で相手の弱いメイドハンドをフォールドさせる。'},
+        fd:        {a:'CHECK/BET',s:'1/3',       r:'非ナッツFDは頻度でベット。ドライはバックドアドローも多くセミブラフ価値が下がるため頻度を下げる。小サイズで相手を絞りながらエクイティを実現。'},
+        oesd:      {a:'CHECK/BET',s:'1/3',       r:'OESDはエクイティ大。ドライIPはそもそも高頻度CBetのためOESDをブラフとして使う必要性が低い。チェックorスモールベット。'},
+        gs:        {a:'CHECK',    s:'−',         r:'GS単体はチェック推奨。エクイティが低く大サイズのセミブラフには向かない。ドライIPはブラフ枠を強セミブラフに絞る。'},
+        bdfd:      {a:'CHECK/BET',s:'1/3',       r:'BDFDはブラフ候補として選択的に使う。ドライIPは広くCBetするためBDFDは1/3で混ぜてバランスを取る。'},
+        air:       {a:'CHECK',    s:'−',         r:'エアーはチェック。ドライIPはそもそもベット頻度が高くエアーブラフは不要。チェックしてターンのフリーカードを見る。'},
       },
-      // ドライミッド (985r, T54r等)
       drymid:{
-        nuts:      {a:'BET',      s:'1/3〜1/2',   r:'ミッドドライも小サイズ高頻度。'},
-        op:        {a:'BET',      s:'1/3',         r:'オーバーペアはミッドで保護ベット。小サイズ。'},
-        '2pair_str':{a:'BET',     s:'1/2',         r:'強2ペアは積極的にベット。'},
-        '2pair_weak':{a:'BET',    s:'1/3',         r:'小サイズ広くベット。'},
-        tptk:      {a:'BET',      s:'1/3',         r:'ミッドのTPTKも1/3高頻度。'},
-        tpwk:      {a:'CHECK',    s:'−',           r:'弱TPはチェック。'},
-        mp:        {a:'CHECK',    s:'−',           r:'ミドルペアはチェック。'},
-        bp:        {a:'CHECK',    s:'−',           r:'ボトムペアはチェック。'},
-        nfd:       {a:'BET',      s:'1/2',         r:'ナッツFDはセミブラフ。'},
-        fd:        {a:'CHECK/BET',s:'1/3',         r:'FDは頻度ベット。'},
-        oesd:      {a:'BET',      s:'1/3〜1/2',   r:'OESDはミッドで強力。積極的にベット。'},
-        gs:        {a:'CHECK/BET',s:'1/3',         r:'GS単体は頻度でベット。'},
-        bdfd:      {a:'CHECK',    s:'−',           r:'BDFDはチェック。'},
-        air:       {a:'CHECK',    s:'−',           r:'エアーはチェック。'},
+        nuts:      {a:'BET',      s:'1/3〜1/2', r:'ドライミッドも小〜中サイズ高頻度。IPがオーバーペアを多く持ちナットアドバンテージあり。1/3で高頻度CBet。'},
+        op:        {a:'BET',      s:'1/3',       r:'オーバーペアはミッドで保護ベット。全ドローに対して保護が必要。小サイズで広くベット。'},
+        '2pair_str':{a:'BET',     s:'1/2',       r:'強2ペアは積極的にベット。ミッドはコネクテッド性が高くターンで逆転されうる。早期に中サイズで価値を取る。'},
+        '2pair_weak':{a:'BET',    s:'1/3',       r:'弱2ペアも小サイズ広くベット。'},
+        tptk:      {a:'BET',      s:'1/3',       r:'ミッドのTPTKも1/3高頻度。IPのレンジ優位を活かして広くCBet。'},
+        tpwk:      {a:'CHECK',    s:'−',         r:'弱TPはチェック。ミッドはドローが豊富でチェックレイズリスクが高い。'},
+        mp:        {a:'CHECK',    s:'−',         r:'ミドルペアはチェック。'},
+        bp:        {a:'CHECK',    s:'−',         r:'ボトムペアはチェック。'},
+        nfd:       {a:'BET',      s:'1/2',       r:'ナッツFDはセミブラフ。中サイズで相手のメイドハンドに圧力をかける。'},
+        fd:        {a:'CHECK/BET',s:'1/3',       r:'FDは頻度ベット。小サイズ。'},
+        oesd:      {a:'BET',      s:'1/3〜1/2', r:'OESDはミッドで強力。フラッシュドロー+ストレートドローの可能性もあり積極的にベット。'},
+        gs:        {a:'CHECK/BET',s:'1/3',       r:'GS単体は頻度でベット。'},
+        bdfd:      {a:'CHECK',    s:'−',         r:'BDFDはチェック。'},
+        air:       {a:'CHECK',    s:'−',         r:'エアーはチェック。'},
       },
-      // ウェット (KJ7tt, JT9等) — 大サイズ。GTO Wizard: KJ7ttで75%〜125%overbet使用
       wet:{
-        nuts:      {a:'BET',      s:'2/3〜POT',   r:'GTO Wizardデータ: ウェットボードで大サイズ〜オーバーベット。fold equityが非常に高い。'},
-        op:        {a:'BET',      s:'2/3',         r:'オーバーペアはウェットで保護必須。2/3〜POTで価値+保護。'},
-        '2pair_str':{a:'BET',     s:'2/3',         r:'強2ペアはターンで変わりやすい。大サイズで今すぐ価値を取る。'},
-        '2pair_weak':{a:'BET',    s:'1/2',         r:'弱2ペアも保護が重要。中サイズ。'},
-        tptk:      {a:'BET',      s:'1/2〜2/3',   r:'ウェットのTPTKは保護必須。中〜大サイズ。GTO Wizard: K9s/K8s等弱Kはチェック多い。'},
-        tpwk:      {a:'CHECK/BET',s:'1/3',         r:'弱TPはチェック多め。ベットなら1/3。'},
-        mp:        {a:'CHECK',    s:'−',           r:'ミドルペアはウェットでチェック。フラッシュ/ストレートに弱い。'},
-        bp:        {a:'CHECK',    s:'−',           r:'ボトムペアはチェック。'},
-        nfd:       {a:'BET',      s:'2/3',         r:'ナッツFDはウェットで最強のセミブラフ。大サイズ。'},
-        fd:        {a:'BET',      s:'1/2',         r:'FDもウェットでは積極的なセミブラフ。中サイズ。'},
-        oesd:      {a:'BET',      s:'1/2',         r:'OESDはウェットで高エクイティ。積極的にベット。'},
-        gs:        {a:'CHECK/BET',s:'1/3',         r:'GS単体は頻度ベット。'},
-        bdfd:      {a:'BET/CHECK',s:'1/3',         r:'BDFDは選択的にセミブラフ。'},
-        air:       {a:'CHECK',    s:'−',           r:'エアーはチェック。ウェットはブラフを強ハンドに絞る。'},
+        nuts:      {a:'BET',      s:'2/3〜POT', r:'GTO Wizard: KJ7ttでIPが75〜125%のオーバーベットを使用。ウェットボードでfold equityが非常に高く、相手レンジの50〜60%エクイティのハンド（K9s等）をフォールドさせることができる。ナットアドバンテージ+高いfold equityで大サイズが最適。'},
+        op:        {a:'BET',      s:'2/3',       r:'オーバーペアはウェットで保護必須。フラッシュ・ストレートドローが多く存在し早期に価値を取ることが重要。ターンで逆転されるリスクが高いため2/3〜POTで価値と保護を兼ねる。'},
+        '2pair_str':{a:'BET',     s:'2/3',       r:'強2ペアはターンで改善されやすく今すぐ大きな価値を取る。ウェットは相手のドローが多く保護も兼ねて大サイズで即座に価値を確定させる。'},
+        '2pair_weak':{a:'BET',    s:'1/2',       r:'弱2ペアも保護が重要。ウェットはドローに弱く中サイズで現在の優位性を守る。'},
+        tptk:      {a:'BET',      s:'1/2〜2/3', r:'ウェットのTPTKは保護必須。GTO Wizard: 弱いキッカーのKxはチェック多い。TPTKはドローに対して保護しながら価値を取る。中〜大サイズ。'},
+        tpwk:      {a:'CHECK/BET',s:'1/3',       r:'弱TPはチェック多め。ウェットでチェックレイズリスクあり。ベットするなら小サイズ。'},
+        mp:        {a:'CHECK',    s:'−',         r:'ミドルペアはウェットでチェック。フラッシュ・ストレートに弱く価値ベットできない。'},
+        bp:        {a:'CHECK',    s:'−',         r:'ボトムペアはチェック。'},
+        nfd:       {a:'BET',      s:'2/3',       r:'ナッツFDはウェットで最強のセミブラフ。大サイズでフォールドエクイティを最大化。フラッシュ完成時に最大価値も得られる。'},
+        fd:        {a:'BET',      s:'1/2',       r:'FDもウェットでは積極的なセミブラフ。フォールドエクイティ高く中サイズが適切。'},
+        oesd:      {a:'BET',      s:'1/2',       r:'OESDはウェットで高エクイティ。積極的にベット。フラッシュドローと組み合わさるとさらに強力。'},
+        gs:        {a:'CHECK/BET',s:'1/3',       r:'GS単体は頻度ベット。ウェットはブラフ範囲を強セミブラフに絞るため頻度を下げる。'},
+        bdfd:      {a:'BET/CHECK',s:'1/3',       r:'BDFDは選択的にセミブラフ。ウェットのブラフ枠は強ドローに絞るが小サイズで混ぜる。'},
+        air:       {a:'CHECK',    s:'−',         r:'エアーはチェック。ウェットはブラフを強ドローハンドに絞る。エクイティなしのブラフはリスクが高い。'},
       },
-      // モノトーン — GTO Wizard: ベット頻度・サイズが大幅低下。フラッシュがOOPに多数
       mono:{
-        nuts:      {a:'BET',      s:'1/3',         r:'GTO Wizard: モノトーンはIPのナットアドバンテージが薄れる。ナッツFD持ちは小サイズ。'},
-        op:        {a:'BET/CHECK',s:'1/3',         r:'オーバーペアはナッツFDなければ慎重に。小サイズorチェック。'},
-        '2pair_str':{a:'BET/CHECK',s:'1/3',        r:'強2ペアも小サイズorチェック。フラッシュに負ける可能性。'},
-        '2pair_weak':{a:'CHECK',  s:'−',           r:'弱2ペアはチェック推奨。'},
-        tptk:      {a:'BET/CHECK',s:'1/3',         r:'TPTKもナッツFDなければ慎重。小サイズorチェック。'},
-        tpwk:      {a:'CHECK',    s:'−',           r:'弱TPはチェック。'},
-        mp:        {a:'CHECK',    s:'−',           r:'ミドルペアはチェック。'},
-        bp:        {a:'CHECK',    s:'−',           r:'ボトムペアはチェック。'},
-        nfd:       {a:'BET',      s:'1/2〜2/3',   r:'ナッツFDはモノトーンで最強。積極的にセミブラフ。'},
-        fd:        {a:'CHECK/BET',s:'1/3',         r:'非ナッツFDは頻度ベット。小サイズ。'},
-        oesd:      {a:'CHECK',    s:'−',           r:'FDなしOESDはチェック。フラッシュに弱い。'},
-        gs:        {a:'CHECK',    s:'−',           r:'GSはチェック。'},
-        bdfd:      {a:'CHECK',    s:'−',           r:'BDFDはチェック。'},
-        air:       {a:'CHECK',    s:'−',           r:'エアーはチェック。モノトーンのIPはCBet頻度が大幅低下。'},
+        nuts:      {a:'BET',      s:'1/3',       r:'GTO Wizard: モノトーンはIPのナットアドバンテージが薄れる。OOPもフラッシュを多く持つ。ナッツFD保有者がcalling rangeをブロックするため大サイズは不要。小サイズで広くベット。'},
+        op:        {a:'BET/CHECK',s:'1/3',       r:'オーバーペアはナッツFDなければ慎重に。フラッシュに負ける可能性があり小サイズorチェック。'},
+        '2pair_str':{a:'BET/CHECK',s:'1/3',      r:'強2ペアも小サイズorチェック。フラッシュに負ける可能性があり大サイズは不要。'},
+        '2pair_weak':{a:'CHECK',  s:'−',         r:'弱2ペアはチェック推奨。モノトーンでのベットは危険が多い。'},
+        tptk:      {a:'BET/CHECK',s:'1/3',       r:'TPTKもナッツFDなければ慎重。モノトーンIPはCBet頻度が大幅低下。小サイズorチェック。'},
+        tpwk:      {a:'CHECK',    s:'−',         r:'弱TPはチェック。モノトーンでのベットは逆効果になりうる。'},
+        mp:        {a:'CHECK',    s:'−',         r:'ミドルペアはチェック。'},
+        bp:        {a:'CHECK',    s:'−',         r:'ボトムペアはチェック。'},
+        nfd:       {a:'BET',      s:'1/2〜2/3', r:'ナッツFDはモノトーンで最強。IPのナットアドバンテージを活かして積極的にセミブラフ。フラッシュ完成時も最大価値。'},
+        fd:        {a:'CHECK/BET',s:'1/3',       r:'非ナッツFDは頻度ベット。ナッツFDに比べフラッシュ完成時の価値が劣るため慎重に。'},
+        oesd:      {a:'CHECK',    s:'−',         r:'FDなしOESDはチェック。モノトーンでは相手のフラッシュに弱い。'},
+        gs:        {a:'CHECK',    s:'−',         r:'GSはチェック。'},
+        bdfd:      {a:'CHECK',    s:'−',         r:'BDFDはチェック。'},
+        air:       {a:'CHECK',    s:'−',         r:'エアーはチェック。モノトーンIPはCBet頻度が大幅低下し強ドロー以外はチェック推奨。'},
       },
-      // ペアボード (QQ6r, AA2等) — GTO Wizard: 小サイズ高頻度。両者にトリプスあり
       paired:{
-        nuts:      {a:'BET',      s:'1/3',         r:'GTO Wizard QQ6rデータ: 小サイズ高頻度CBet。villainにも強ハンドありoverbet不要。'},
-        op:        {a:'BET',      s:'1/3',         r:'オーバーペアはペアボードで小サイズ高頻度。'},
-        '2pair_str':{a:'BET',     s:'1/3',         r:'フルハウスドロー含む。小サイズで広くベット。'},
-        '2pair_weak':{a:'BET',    s:'1/3',         r:'小サイズ高頻度。'},
-        tptk:      {a:'BET',      s:'1/3',         r:'ペアボードのTPTKは小サイズ高頻度。GTO Wizardでほぼ全レンジベット。'},
-        tpwk:      {a:'BET',      s:'1/3',         r:'弱TPも小サイズなら高頻度ベット可。'},
-        mp:        {a:'CHECK',    s:'−',           r:'ミドルペアはチェック。'},
-        bp:        {a:'CHECK',    s:'−',           r:'ボトムペアはチェック。'},
-        nfd:       {a:'BET',      s:'1/2',         r:'ナッツFDはセミブラフ。中サイズ。'},
-        fd:        {a:'BET/CHECK',s:'1/3',         r:'FDは頻度ベット。'},
-        oesd:      {a:'CHECK/BET',s:'1/3',         r:'OESDはチェックorスモールベット。'},
-        gs:        {a:'CHECK',    s:'−',           r:'GSはチェック。ペアボードはドロー実現しにくい。'},
-        bdfd:      {a:'CHECK',    s:'−',           r:'BDFDはチェック。'},
-        air:       {a:'CHECK',    s:'−',           r:'エアーはチェック。'},
+        nuts:      {a:'BET',      s:'1/3',       r:'GTO Wizard QQ6rデータ: BTNが33%サイズで高頻度CBet、BB折り畳み率37%。両者にトリプスがあるためナットアドバンテージ低下。小サイズ高頻度でミドルハンドも同じサイズに組み込むバランス戦略が最適。'},
+        op:        {a:'BET',      s:'1/3',       r:'オーバーペアはペアボードで小サイズ高頻度。トリプスの可能性があるため大サイズは不要。GTO Wizard推奨の全レンジ小サイズ戦略に組み込む。'},
+        '2pair_str':{a:'BET',     s:'1/3',       r:'フルハウスドロー含む。ペアボードでも小サイズで広くベット。ドローが出づらく保護ニーズが低いため小サイズで十分。'},
+        '2pair_weak':{a:'BET',    s:'1/3',       r:'小サイズ高頻度。'},
+        tptk:      {a:'BET',      s:'1/3',       r:'ペアボードのTPTKは小サイズ高頻度。GTO Wizardでほぼ全レンジベット。'},
+        tpwk:      {a:'BET',      s:'1/3',       r:'弱TPも小サイズなら高頻度ベット可。ペアボードはドローが出づらく保護ニーズが低い。'},
+        mp:        {a:'CHECK',    s:'−',         r:'ミドルペアはチェック。'},
+        bp:        {a:'CHECK',    s:'−',         r:'ボトムペアはチェック。'},
+        nfd:       {a:'BET',      s:'1/2',       r:'ナッツFDはセミブラフ。ペアボードはドローが出づらいがFDは有効。中サイズ。'},
+        fd:        {a:'BET/CHECK',s:'1/3',       r:'FDは頻度ベット。'},
+        oesd:      {a:'CHECK/BET',s:'1/3',       r:'OESDはチェックorスモールベット。'},
+        gs:        {a:'CHECK',    s:'−',         r:'GSはチェック。ペアボードはドロー実現しにくい。'},
+        bdfd:      {a:'CHECK',    s:'−',         r:'BDFDはチェック。'},
+        air:       {a:'CHECK',    s:'−',         r:'エアーはチェック。'},
       },
-      // ローボード (654r, 532r等) — IPがレンジ超優位。ほぼ全レンジCBet
       low:{
-        nuts:      {a:'BET',      s:'1/3',         r:'ローボードはIPが圧倒的レンジ優位。全レンジCBetが基本。ナッツは小サイズ。'},
-        op:        {a:'BET',      s:'1/3',         r:'オーバーペアはローで最強クラス。小サイズ高頻度。'},
-        '2pair_str':{a:'BET',     s:'1/3〜1/2',   r:'強2ペアは中サイズで価値。'},
-        '2pair_weak':{a:'BET',    s:'1/3',         r:'小サイズ広くベット。'},
-        tptk:      {a:'BET',      s:'1/3',         r:'ローボードのTP。IP優位なので高頻度ベット。'},
-        tpwk:      {a:'BET',      s:'1/3',         r:'弱TPもローボードIPなら小サイズベット可。'},
-        mp:        {a:'BET/CHECK',s:'1/3',         r:'ミドルペアも頻度ベット。ローはIP超有利。'},
-        bp:        {a:'CHECK',    s:'−',           r:'ボトムペアはチェック。'},
-        nfd:       {a:'BET',      s:'1/2',         r:'ナッツFDはセミブラフ。'},
-        fd:        {a:'BET/CHECK',s:'1/3',         r:'FDは頻度ベット。'},
-        oesd:      {a:'BET',      s:'1/3〜1/2',   r:'OESDはローで強力。積極的にベット。'},
-        gs:        {a:'BET/CHECK',s:'1/3',         r:'GS単体も頻度ベット。'},
-        bdfd:      {a:'BET/CHECK',s:'1/3',         r:'BDFDも選択的ベット。ローIPは広くCBet。'},
-        air:       {a:'BET',      s:'1/3',         r:'GTO Wizard: ローボードIPはエアーもほぼ全レンジCBet。レンジベット戦略。'},
+        nuts:      {a:'BET',      s:'1/3',       r:'ローボードはIPが圧倒的レンジ優位。プリフロップレイザーがオーバーペアを多く持ちナットアドバンテージ大。GTO Wizard: ほぼ全レンジCBetが基本戦略。ナッツは小サイズ。'},
+        op:        {a:'BET',      s:'1/3',       r:'オーバーペアはローで最強クラス。ナットアドバンテージ大で小サイズ高頻度。相手がオーバーペアを持てないため優位性が非常に高い。'},
+        '2pair_str':{a:'BET',     s:'1/3〜1/2', r:'強2ペアは中サイズで価値。ローボードIPはナット優位のためサイズを上げられる。'},
+        '2pair_weak':{a:'BET',    s:'1/3',       r:'弱2ペアも小サイズ広くベット。ローIPは超高頻度CBet戦略。'},
+        tptk:      {a:'BET',      s:'1/3',       r:'ローボードのTP。IP優位なので高頻度ベット。'},
+        tpwk:      {a:'BET',      s:'1/3',       r:'弱TPもローボードIPなら小サイズベット可。全レンジCBet戦略の一環。'},
+        mp:        {a:'BET/CHECK',s:'1/3',       r:'ミドルペアも頻度ベット。ローはIP超有利のため通常チェックするハンドでもベット可。'},
+        bp:        {a:'CHECK',    s:'−',         r:'ボトムペアはチェック。ショーダウンバリューが低い。'},
+        nfd:       {a:'BET',      s:'1/2',       r:'ナッツFDはセミブラフ。ローIPはナット優位+セミブラフで最強の組み合わせ。'},
+        fd:        {a:'BET/CHECK',s:'1/3',       r:'FDは頻度ベット。ローIPは全レンジCBet戦略のためFDも積極的。'},
+        oesd:      {a:'BET',      s:'1/3〜1/2', r:'OESDはローで強力。IPのオーバーペアとコンバインしてエクイティが高い。積極的にベット。'},
+        gs:        {a:'BET/CHECK',s:'1/3',       r:'GS単体も頻度ベット。ローIPは広くCBet。'},
+        bdfd:      {a:'BET/CHECK',s:'1/3',       r:'BDFDも選択的ベット。ローIPはほぼ全レンジCBet戦略。'},
+        air:       {a:'BET',      s:'1/3',       r:'GTO Wizard: ローボードIPはエアーもほぼ全レンジCBet。ナットアドバンテージが非常に大きいためレンジベット戦略が成立する。全レンジベットでバランスが取れる。'},
       },
     },
     oop:{
-      // OOP SRP: 基本チェック。チェックレイズ戦略
       dryhigh:{
-        nuts:      {a:'CHECK',    s:'−',           r:'OOPのナッツはチェックレイズ狙い。AハイでOOPが大サイズで上がってくる。'},
-        op:        {a:'CHECK',    s:'−',           r:'OOPのオーバーペアはチェックレイズor待ち。'},
-        '2pair_str':{a:'CHECK',   s:'−',           r:'強2ペアはチェックレイズ。'},
-        '2pair_weak':{a:'CHECK',  s:'−',           r:'弱2ペアはチェック。'},
-        tptk:      {a:'CHECK/BET',s:'1/3',         r:'GTO Wizard: AハイのTPTKはOOPでも頻度でCBet。小サイズ。ただしKJxは弱Kixはチェック多い。'},
-        tpwk:      {a:'CHECK',    s:'−',           r:'弱TPはチェック。'},
-        mp:        {a:'CHECK',    s:'−',           r:'ミドルペアはチェック。'},
-        bp:        {a:'CHECK',    s:'−',           r:'ボトムペアはチェック。'},
-        nfd:       {a:'CHECK',    s:'−',           r:'ナッツFDはチェックレイズが基本。'},
-        fd:        {a:'CHECK',    s:'−',           r:'FDはチェック。'},
-        oesd:      {a:'CHECK',    s:'−',           r:'OESDはチェック。チェックレイズ候補。'},
-        gs:        {a:'CHECK',    s:'−',           r:'GSはチェック。'},
-        bdfd:      {a:'CHECK',    s:'−',           r:'BDFDはチェック。'},
-        air:       {a:'CHECK',    s:'−',           r:'エアーはチェック。'},
+        nuts:      {a:'CHECK',    s:'−',         r:'OOPのナッツはチェックレイズ狙い。相手がCBetしてくれば大サイズでチェックレイズ。IPのCBetを誘発してポットを大きくする。ドンクベットはレンジが読まれやすいため基本チェック。'},
+        op:        {a:'CHECK',    s:'−',         r:'OOPのオーバーペアはチェックレイズorチェックコール。IPのCBetを誘発して利益を最大化。ドンクは弱く見える可能性がある。'},
+        '2pair_str':{a:'CHECK',   s:'−',         r:'強2ペアはチェックレイズ。'},
+        '2pair_weak':{a:'CHECK',  s:'−',         r:'弱2ペアはチェック。価値ベットとして不十分。'},
+        tptk:      {a:'CHECK/BET',s:'1/3',       r:'GTO Wizard: AハイのTPTKはOOPでも頻度でCBet。小サイズ。ただしKJx等の弱いキッカーはチェック多い。AハイはOOPでも持つ頻度が高くドンクCBetが成立する局面がある。'},
+        tpwk:      {a:'CHECK',    s:'−',         r:'弱TPはチェック。OOPで弱い2番手ハンドをベットするとチェックレイズに弱い。'},
+        mp:        {a:'CHECK',    s:'−',         r:'ミドルペアはチェック。'},
+        bp:        {a:'CHECK',    s:'−',         r:'ボトムペアはチェック。'},
+        nfd:       {a:'CHECK',    s:'−',         r:'ナッツFDはチェックレイズが基本。IPのCBetに乗じて大サイズでチェックレイズ。フラッシュ完成時も価値が高い。'},
+        fd:        {a:'CHECK',    s:'−',         r:'FDはチェック。OOPでのドンクはレンジが偏りすぎる。'},
+        oesd:      {a:'CHECK',    s:'−',         r:'OESDはチェック。チェックレイズ候補。'},
+        gs:        {a:'CHECK',    s:'−',         r:'GSはチェック。'},
+        bdfd:      {a:'CHECK',    s:'−',         r:'BDFDはチェック。'},
+        air:       {a:'CHECK',    s:'−',         r:'エアーはチェック。'},
       },
       drymid:{
-        nuts:      {a:'BET/CHECK',s:'1/3',         r:'ナッツはドンクベットorチェックレイズ。'},
-        op:        {a:'CHECK',    s:'−',           r:'オーバーペアはチェックレイズ狙い。'},
-        '2pair_str':{a:'CHECK',   s:'−',           r:'強2ペアはチェックレイズ。'},
-        '2pair_weak':{a:'CHECK',  s:'−',           r:'チェック。'},
-        tptk:      {a:'CHECK',    s:'−',           r:'ミッドOOPのTPTKはチェック。'},
-        tpwk:      {a:'CHECK',    s:'−',           r:'弱TPはチェック。'},
-        mp:        {a:'CHECK',    s:'−',           r:'チェック。'},
-        bp:        {a:'CHECK',    s:'−',           r:'チェック。'},
-        nfd:       {a:'CHECK',    s:'−',           r:'ナッツFDはチェックレイズ。'},
-        fd:        {a:'CHECK',    s:'−',           r:'FDはチェック。'},
-        oesd:      {a:'CHECK/BET',s:'1/3',         r:'OESDは頻度でドンクベット。'},
-        gs:        {a:'CHECK',    s:'−',           r:'GSはチェック。'},
-        bdfd:      {a:'CHECK',    s:'−',           r:'BDFDはチェック。'},
-        air:       {a:'CHECK',    s:'−',           r:'エアーはチェック。'},
+        nuts:      {a:'BET/CHECK',s:'1/3',       r:'ナッツはドンクベットorチェックレイズ。ミッドドライではドンクが有効な局面がある。小サイズで相手のレンジ全体に圧力をかける。'},
+        op:        {a:'CHECK',    s:'−',         r:'オーバーペアはチェックレイズ狙い。'},
+        '2pair_str':{a:'CHECK',   s:'−',         r:'強2ペアはチェックレイズ。'},
+        '2pair_weak':{a:'CHECK',  s:'−',         r:'チェック。'},
+        tptk:      {a:'CHECK',    s:'−',         r:'ミッドOOPのTPTKはチェック。チェックレイズ候補。'},
+        tpwk:      {a:'CHECK',    s:'−',         r:'弱TPはチェック。'},
+        mp:        {a:'CHECK',    s:'−',         r:'チェック。'},
+        bp:        {a:'CHECK',    s:'−',         r:'チェック。'},
+        nfd:       {a:'CHECK',    s:'−',         r:'ナッツFDはチェックレイズ。'},
+        fd:        {a:'CHECK',    s:'−',         r:'FDはチェック。'},
+        oesd:      {a:'CHECK/BET',s:'1/3',       r:'OESDは頻度でドンクベット。エクイティが高くミッドドライではドンクが有効。'},
+        gs:        {a:'CHECK',    s:'−',         r:'GSはチェック。'},
+        bdfd:      {a:'CHECK',    s:'−',         r:'BDFDはチェック。'},
+        air:       {a:'CHECK',    s:'−',         r:'エアーはチェック。'},
       },
       wet:{
-        nuts:      {a:'BET/CHECK',s:'2/3',         r:'ウェットOOPのナッツはドンクベット有効。大サイズで保護+価値。'},
-        op:        {a:'BET/CHECK',s:'1/2',         r:'オーバーペアは保護のためドンクorチェックレイズ。'},
-        '2pair_str':{a:'BET/CHECK',s:'1/2',        r:'強2ペアは保護必須。ドンクorチェックレイズ。'},
-        '2pair_weak':{a:'CHECK',  s:'−',           r:'弱2ペアはチェック。ウェットは危険。'},
-        tptk:      {a:'CHECK',    s:'−',           r:'ウェットOOPのTPTKはチェック。'},
-        tpwk:      {a:'CHECK',    s:'−',           r:'弱TPはチェック。'},
-        mp:        {a:'CHECK',    s:'−',           r:'ミドルペアはチェック。'},
-        bp:        {a:'CHECK',    s:'−',           r:'ボトムペアはチェック。'},
-        nfd:       {a:'CHECK/BET',s:'1/2',         r:'ナッツFDはOOPでもセミブラフ可。チェックレイズorドンク。'},
-        fd:        {a:'CHECK',    s:'−',           r:'非ナッツFDはチェック。'},
-        oesd:      {a:'CHECK/BET',s:'1/3',         r:'OESDは頻度でセミブラフ。'},
-        gs:        {a:'CHECK',    s:'−',           r:'GSはチェック。'},
-        bdfd:      {a:'CHECK',    s:'−',           r:'BDFDはチェック。'},
-        air:       {a:'CHECK',    s:'−',           r:'エアーはチェック。'},
+        nuts:      {a:'BET/CHECK',s:'2/3',       r:'ウェットOOPのナッツはドンクベット有効。大サイズで保護+価値。ウェットボードでIPがCBetする前に先手を打つことで最大価値を取れる。フラッシュ/ストレート完成ボードをブロックしている場合は特に有効。'},
+        op:        {a:'BET/CHECK',s:'1/2',       r:'オーバーペアは保護のためドンクorチェックレイズ。ウェットでターンに逆転されるリスクが高い。'},
+        '2pair_str':{a:'BET/CHECK',s:'1/2',      r:'強2ペアは保護必須。ドンクorチェックレイズ。'},
+        '2pair_weak':{a:'CHECK',  s:'−',         r:'弱2ペアはチェック。ウェットは危険で価値ベットできない。'},
+        tptk:      {a:'CHECK',    s:'−',         r:'ウェットOOPのTPTKはチェック。ドローに弱くチェックレイズで守る。'},
+        tpwk:      {a:'CHECK',    s:'−',         r:'弱TPはチェック。'},
+        mp:        {a:'CHECK',    s:'−',         r:'ミドルペアはチェック。'},
+        bp:        {a:'CHECK',    s:'−',         r:'ボトムペアはチェック。'},
+        nfd:       {a:'CHECK/BET',s:'1/2',       r:'ナッツFDはOOPでもセミブラフ可。チェックレイズorドンクベット。フラッシュ完成時に最大価値を取れる。'},
+        fd:        {a:'CHECK',    s:'−',         r:'非ナッツFDはチェック。OOPでのドンクはレンジが偏る。'},
+        oesd:      {a:'CHECK/BET',s:'1/3',       r:'OESDは頻度でセミブラフ。ウェットではエクイティが高い。'},
+        gs:        {a:'CHECK',    s:'−',         r:'GSはチェック。'},
+        bdfd:      {a:'CHECK',    s:'−',         r:'BDFDはチェック。'},
+        air:       {a:'CHECK',    s:'−',         r:'エアーはチェック。'},
       },
       mono:{
-        nuts:      {a:'CHECK',    s:'−',           r:'モノトーンOOPはほぼチェック。チェックレイズ狙い。ナッツFDなければ特に。'},
-        op:        {a:'CHECK',    s:'−',           r:'チェックレイズ。'},
-        '2pair_str':{a:'CHECK',   s:'−',           r:'チェックレイズ。'},
-        '2pair_weak':{a:'CHECK',  s:'−',           r:'チェック。'},
-        tptk:      {a:'CHECK',    s:'−',           r:'TPTKもモノトーンOOPはチェック。'},
-        tpwk:      {a:'CHECK',    s:'−',           r:'チェック。'},
-        mp:        {a:'CHECK',    s:'−',           r:'チェック。'},
-        bp:        {a:'CHECK',    s:'−',           r:'チェック。'},
-        nfd:       {a:'BET/CHECK',s:'1/3',         r:'ナッツFDのみドンクベット有効。チェックレイズも。'},
-        fd:        {a:'CHECK',    s:'−',           r:'非ナッツFDはチェック。'},
-        oesd:      {a:'CHECK',    s:'−',           r:'OESDはチェック。'},
-        gs:        {a:'CHECK',    s:'−',           r:'GSはチェック。'},
-        bdfd:      {a:'CHECK',    s:'−',           r:'BDFDはチェック。'},
-        air:       {a:'CHECK',    s:'−',           r:'エアーはチェック。'},
+        nuts:      {a:'CHECK',    s:'−',         r:'モノトーンOOPはほぼチェック。チェックレイズ狙い。両者レンジにフラッシュが多くナットアドバンテージが低下。ナッツFDなければ特に。'},
+        op:        {a:'CHECK',    s:'−',         r:'チェックレイズ。'},
+        '2pair_str':{a:'CHECK',   s:'−',         r:'チェックレイズ。'},
+        '2pair_weak':{a:'CHECK',  s:'−',         r:'チェック。'},
+        tptk:      {a:'CHECK',    s:'−',         r:'TPTKもモノトーンOOPはチェック。'},
+        tpwk:      {a:'CHECK',    s:'−',         r:'チェック。'},
+        mp:        {a:'CHECK',    s:'−',         r:'チェック。'},
+        bp:        {a:'CHECK',    s:'−',         r:'チェック。'},
+        nfd:       {a:'BET/CHECK',s:'1/3',       r:'ナッツFDのみドンクベット有効。OOPでもナッツFDはチェックレイズorドンクで積極的に。'},
+        fd:        {a:'CHECK',    s:'−',         r:'非ナッツFDはチェック。'},
+        oesd:      {a:'CHECK',    s:'−',         r:'OESDはチェック。'},
+        gs:        {a:'CHECK',    s:'−',         r:'GSはチェック。'},
+        bdfd:      {a:'CHECK',    s:'−',         r:'BDFDはチェック。'},
+        air:       {a:'CHECK',    s:'−',         r:'エアーはチェック。'},
       },
       paired:{
-        nuts:      {a:'BET/CHECK',s:'1/3',         r:'ペアOOPのナッツは小ドンクorチェックレイズ。'},
-        op:        {a:'CHECK',    s:'−',           r:'チェックレイズ狙い。'},
-        '2pair_str':{a:'CHECK',   s:'−',           r:'チェックレイズ。'},
-        '2pair_weak':{a:'CHECK',  s:'−',           r:'チェック。'},
-        tptk:      {a:'BET/CHECK',s:'1/3',         r:'TPTKは頻度でCBet。小サイズorチェック。'},
-        tpwk:      {a:'CHECK',    s:'−',           r:'弱TPはチェック。'},
-        mp:        {a:'CHECK',    s:'−',           r:'チェック。'},
-        bp:        {a:'CHECK',    s:'−',           r:'チェック。'},
-        nfd:       {a:'CHECK',    s:'−',           r:'ナッツFDはチェックレイズ。'},
-        fd:        {a:'CHECK',    s:'−',           r:'FDはチェック。'},
-        oesd:      {a:'CHECK',    s:'−',           r:'OESDはチェック。'},
-        gs:        {a:'CHECK',    s:'−',           r:'GSはチェック。'},
-        bdfd:      {a:'CHECK',    s:'−',           r:'BDFDはチェック。'},
-        air:       {a:'CHECK',    s:'−',           r:'エアーはチェック。'},
+        nuts:      {a:'BET/CHECK',s:'1/3',       r:'ペアOOPのナッツは小ドンクorチェックレイズ。ペアボードでは両者にトリプスがあるためチェックレイズが特に有効。'},
+        op:        {a:'CHECK',    s:'−',         r:'チェックレイズ狙い。'},
+        '2pair_str':{a:'CHECK',   s:'−',         r:'チェックレイズ。'},
+        '2pair_weak':{a:'CHECK',  s:'−',         r:'チェック。'},
+        tptk:      {a:'BET/CHECK',s:'1/3',       r:'TPTKは頻度でCBet。小サイズorチェック。'},
+        tpwk:      {a:'CHECK',    s:'−',         r:'弱TPはチェック。'},
+        mp:        {a:'CHECK',    s:'−',         r:'チェック。'},
+        bp:        {a:'CHECK',    s:'−',         r:'チェック。'},
+        nfd:       {a:'CHECK',    s:'−',         r:'ナッツFDはチェックレイズ。'},
+        fd:        {a:'CHECK',    s:'−',         r:'FDはチェック。'},
+        oesd:      {a:'CHECK',    s:'−',         r:'OESDはチェック。'},
+        gs:        {a:'CHECK',    s:'−',         r:'GSはチェック。'},
+        bdfd:      {a:'CHECK',    s:'−',         r:'BDFDはチェック。'},
+        air:       {a:'CHECK',    s:'−',         r:'エアーはチェック。'},
       },
       low:{
-        nuts:      {a:'CHECK/BET',s:'1/3',         r:'ローOOPのナッツはドンクorチェックレイズ。'},
-        op:        {a:'CHECK',    s:'−',           r:'チェックレイズ。'},
-        '2pair_str':{a:'CHECK',   s:'−',           r:'チェックレイズ。'},
-        '2pair_weak':{a:'CHECK',  s:'−',           r:'チェック。'},
-        tptk:      {a:'CHECK',    s:'−',           r:'ローOOPのTPはチェック。'},
-        tpwk:      {a:'CHECK',    s:'−',           r:'チェック。'},
-        mp:        {a:'CHECK',    s:'−',           r:'チェック。'},
-        bp:        {a:'CHECK',    s:'−',           r:'チェック。'},
-        nfd:       {a:'CHECK/BET',s:'1/3',         r:'ナッツFDはセミブラフorチェックレイズ。'},
-        fd:        {a:'CHECK',    s:'−',           r:'FDはチェック。'},
-        oesd:      {a:'CHECK/BET',s:'1/3',         r:'OESDは頻度でドンクベット。'},
-        gs:        {a:'CHECK',    s:'−',           r:'GSはチェック。'},
-        bdfd:      {a:'CHECK',    s:'−',           r:'BDFDはチェック。'},
-        air:       {a:'CHECK',    s:'−',           r:'エアーはチェック。'},
+        nuts:      {a:'CHECK/BET',s:'1/3',       r:'ローOOPのナッツはドンクorチェックレイズ。IPレイザーがオーバーペアを多く持つためチェックレイズが非常に効果的。'},
+        op:        {a:'CHECK',    s:'−',         r:'チェックレイズ。IPにはさらに上のオーバーペアが存在する可能性あり。'},
+        '2pair_str':{a:'CHECK',   s:'−',         r:'チェックレイズ。'},
+        '2pair_weak':{a:'CHECK',  s:'−',         r:'チェック。'},
+        tptk:      {a:'CHECK',    s:'−',         r:'ローOOPのTPはチェック。IPのオーバーペアに劣後する可能性が高い。'},
+        tpwk:      {a:'CHECK',    s:'−',         r:'チェック。'},
+        mp:        {a:'CHECK',    s:'−',         r:'チェック。'},
+        bp:        {a:'CHECK',    s:'−',         r:'チェック。'},
+        nfd:       {a:'CHECK/BET',s:'1/3',       r:'ナッツFDはセミブラフorチェックレイズ。'},
+        fd:        {a:'CHECK',    s:'−',         r:'FDはチェック。'},
+        oesd:      {a:'CHECK/BET',s:'1/3',       r:'OESDは頻度でドンクベット。ローボードでのOESDは強力なセミブラフ。'},
+        gs:        {a:'CHECK',    s:'−',         r:'GSはチェック。'},
+        bdfd:      {a:'CHECK',    s:'−',         r:'BDFDはチェック。'},
+        air:       {a:'CHECK',    s:'−',         r:'エアーはチェック。'},
       },
     },
   },
   '3bet':{
-    // 3betポット: SPRが低い。OOPの3bettorがレンジ優位 → 高頻度CBet
-    // GTO Wizard: "OOPの3betterは低SPRでほぼ全フロップCBet可"
     ip:{
       dryhigh:{
-        nuts:      {a:'BET',      s:'1/3',         r:'3betはSPR低い。小サイズ高頻度CBetが基本。GTO Wizard推奨サイズ。'},
-        op:        {a:'BET',      s:'1/3',         r:'オーバーペアも小サイズ高頻度。'},
-        '2pair_str':{a:'BET',     s:'1/3',         r:'強2ペアは小サイズ高頻度。'},
-        '2pair_weak':{a:'BET',    s:'1/3',         r:'小サイズ高頻度。'},
-        tptk:      {a:'BET',      s:'1/3',         r:'3betポットAハイはほぼ全レンジCBet。1/3サイズ。'},
-        tpwk:      {a:'BET/CHECK',s:'1/3',         r:'弱TPも高頻度ベット。チェックは稀。'},
-        mp:        {a:'BET/CHECK',s:'1/3',         r:'ミドルペアも3betポットでは頻度ベット。'},
-        bp:        {a:'CHECK',    s:'−',           r:'ボトムペアはチェック。'},
-        nfd:       {a:'BET',      s:'1/2',         r:'ナッツFDは積極的セミブラフ。'},
-        fd:        {a:'BET/CHECK',s:'1/3',         r:'FDは頻度ベット。'},
-        oesd:      {a:'BET',      s:'1/3',         r:'OESDは3betで強力。'},
-        gs:        {a:'BET/CHECK',s:'1/3',         r:'GSも頻度ベット。'},
-        bdfd:      {a:'BET/CHECK',s:'1/3',         r:'BDFDも高頻度CBet戦略の一環。'},
-        air:       {a:'BET/CHECK',s:'1/3',         r:'3betIPはエアーブラフも有効。小サイズ高頻度CBet。'},
+        nuts:      {a:'BET',      s:'1/3',       r:'3betポットはSPR約4以下。GTO Wizard: 低SPRではIPも広く小サイズ高頻度CBetが推奨。ストロングハンドも小サイズで広くベットしバランスを取る。'},
+        op:        {a:'BET',      s:'1/3',       r:'オーバーペアも小サイズ高頻度。3betポットのSPRが低いためスタックオフを視野に入れた広いCBet戦略。'},
+        '2pair_str':{a:'BET',     s:'1/3',       r:'強2ペアは小サイズ高頻度。3betポットではSPRが低く小サイズ高頻度が標準戦略。'},
+        '2pair_weak':{a:'BET',    s:'1/3',       r:'小サイズ高頻度。'},
+        tptk:      {a:'BET',      s:'1/3',       r:'3betポットAハイはほぼ全レンジCBet。1/3サイズ高頻度。SPRが低くほぼ全ハンドでベット可能。'},
+        tpwk:      {a:'BET/CHECK',s:'1/3',       r:'弱TPも高頻度ベット。3betポットではチェックは稀。'},
+        mp:        {a:'BET/CHECK',s:'1/3',       r:'ミドルペアも3betポットでは頻度ベット。SPR低くチェックコールよりベットが有利。'},
+        bp:        {a:'CHECK',    s:'−',         r:'ボトムペアはチェック。3betポットでも価値ベットとしては不十分。'},
+        nfd:       {a:'BET',      s:'1/2',       r:'ナッツFDは積極的セミブラフ。3betポットの低SPRと組み合わせて強力。'},
+        fd:        {a:'BET/CHECK',s:'1/3',       r:'FDは頻度ベット。'},
+        oesd:      {a:'BET',      s:'1/3',       r:'OESDは3betで強力。SPR低くスタックオフを視野に入れたベット。'},
+        gs:        {a:'BET/CHECK',s:'1/3',       r:'GSも頻度ベット。3betIPはCBet高頻度。'},
+        bdfd:      {a:'BET/CHECK',s:'1/3',       r:'BDFDも高頻度CBet戦略の一環。'},
+        air:       {a:'BET/CHECK',s:'1/3',       r:'3betIPはエアーブラフも有効。小サイズ高頻度CBet戦略のためブラフも広く混ぜる。'},
       },
       drymid:{
-        nuts:      {a:'BET',      s:'1/3',         r:'小サイズ高頻度。'},
-        op:        {a:'BET',      s:'1/3',         r:'高頻度1/3。'},
-        '2pair_str':{a:'BET',     s:'1/3',         r:'高頻度。'},
-        '2pair_weak':{a:'BET',    s:'1/3',         r:'高頻度。'},
-        tptk:      {a:'BET',      s:'1/3',         r:'3betポットのTPTK。高頻度1/3。'},
-        tpwk:      {a:'BET/CHECK',s:'1/3',         r:'弱TPも頻度ベット。'},
-        mp:        {a:'BET/CHECK',s:'1/3',         r:'頻度ベット。'},
-        bp:        {a:'CHECK',    s:'−',           r:'ボトムペアはチェック。'},
-        nfd:       {a:'BET',      s:'1/2',         r:'ナッツFDはセミブラフ。'},
-        fd:        {a:'BET/CHECK',s:'1/3',         r:'FDは頻度ベット。'},
-        oesd:      {a:'BET',      s:'1/3',         r:'OESD積極的にベット。'},
-        gs:        {a:'CHECK/BET',s:'1/3',         r:'GS頻度ベット。'},
-        bdfd:      {a:'BET/CHECK',s:'1/3',         r:'BDFDも頻度ベット。'},
-        air:       {a:'BET/CHECK',s:'1/3',         r:'エアーも頻度ベット。3betIPはCBet高頻度。'},
+        nuts:      {a:'BET',      s:'1/3',       r:'小サイズ高頻度。3betIPはほぼ全レンジCBet戦略。'},
+        op:        {a:'BET',      s:'1/3',       r:'高頻度1/3。'},
+        '2pair_str':{a:'BET',     s:'1/3',       r:'高頻度。'},
+        '2pair_weak':{a:'BET',    s:'1/3',       r:'高頻度。'},
+        tptk:      {a:'BET',      s:'1/3',       r:'3betポットのTPTK。高頻度1/3。SPRが低くほぼ全ハンドでCBet可。'},
+        tpwk:      {a:'BET/CHECK',s:'1/3',       r:'弱TPも頻度ベット。'},
+        mp:        {a:'BET/CHECK',s:'1/3',       r:'頻度ベット。'},
+        bp:        {a:'CHECK',    s:'−',         r:'ボトムペアはチェック。'},
+        nfd:       {a:'BET',      s:'1/2',       r:'ナッツFDはセミブラフ。'},
+        fd:        {a:'BET/CHECK',s:'1/3',       r:'FDは頻度ベット。'},
+        oesd:      {a:'BET',      s:'1/3',       r:'OESD積極的にベット。'},
+        gs:        {a:'CHECK/BET',s:'1/3',       r:'GS頻度ベット。'},
+        bdfd:      {a:'BET/CHECK',s:'1/3',       r:'BDFDも頻度ベット。'},
+        air:       {a:'BET/CHECK',s:'1/3',       r:'エアーも頻度ベット。3betIPはCBet高頻度。'},
       },
       wet:{
-        nuts:      {a:'BET',      s:'1/2〜2/3',   r:'ウェット3betは保護+価値。中〜大サイズ。'},
-        op:        {a:'BET',      s:'1/2',         r:'オーバーペアは中サイズ。'},
-        '2pair_str':{a:'BET',     s:'1/2',         r:'強ハンドは保護。'},
-        '2pair_weak':{a:'BET',    s:'1/3〜1/2',   r:'弱2ペアも保護ベット。'},
-        tptk:      {a:'BET',      s:'1/3〜1/2',   r:'ウェット3betのTPTKは保護重要。'},
-        tpwk:      {a:'CHECK/BET',s:'1/3',         r:'弱TPはチェック多め。'},
-        mp:        {a:'CHECK',    s:'−',           r:'ミドルペアはチェック。'},
-        bp:        {a:'CHECK',    s:'−',           r:'ボトムペアはチェック。'},
-        nfd:       {a:'BET',      s:'2/3',         r:'ナッツFDは大サイズセミブラフ。'},
-        fd:        {a:'BET',      s:'1/2',         r:'FDも積極的。'},
-        oesd:      {a:'BET',      s:'1/2',         r:'OESDも積極的。'},
-        gs:        {a:'CHECK/BET',s:'1/3',         r:'GS頻度ベット。'},
-        bdfd:      {a:'BET/CHECK',s:'1/3',         r:'BDFDは選択的。'},
-        air:       {a:'CHECK',    s:'−',           r:'エアーはチェック。ウェットはCBet頻度落ちる。'},
+        nuts:      {a:'BET',      s:'1/2〜2/3', r:'ウェット3betは保護+価値。SPRが低いため大サイズでも相手のコーリングレンジに圧力をかけられる。中〜大サイズ。'},
+        op:        {a:'BET',      s:'1/2',       r:'オーバーペアは中サイズ。保護とSPRを考慮した適切なサイズ。'},
+        '2pair_str':{a:'BET',     s:'1/2',       r:'強ハンドは保護。3betポットのウェットは早期に価値を取る。'},
+        '2pair_weak':{a:'BET',    s:'1/3〜1/2', r:'弱2ペアも保護ベット。'},
+        tptk:      {a:'BET',      s:'1/3〜1/2', r:'ウェット3betのTPTKは保護重要。中サイズで価値と保護を兼ねる。'},
+        tpwk:      {a:'CHECK/BET',s:'1/3',       r:'弱TPはチェック多め。'},
+        mp:        {a:'CHECK',    s:'−',         r:'ミドルペアはチェック。'},
+        bp:        {a:'CHECK',    s:'−',         r:'ボトムペアはチェック。'},
+        nfd:       {a:'BET',      s:'2/3',       r:'ナッツFDは大サイズセミブラフ。3betポットの低SPRと合わせて強力。'},
+        fd:        {a:'BET',      s:'1/2',       r:'FDも積極的。'},
+        oesd:      {a:'BET',      s:'1/2',       r:'OESDも積極的。'},
+        gs:        {a:'CHECK/BET',s:'1/3',       r:'GS頻度ベット。'},
+        bdfd:      {a:'BET/CHECK',s:'1/3',       r:'BDFDは選択的。'},
+        air:       {a:'CHECK',    s:'−',         r:'エアーはチェック。ウェットはCBet頻度落ちる。'},
       },
       mono:{
-        nuts:      {a:'BET',      s:'1/3',         r:'モノトーン3betも小サイズ高頻度。'},
-        op:        {a:'BET/CHECK',s:'1/3',         r:'ナッツFDなければ慎重に。'},
-        '2pair_str':{a:'BET',     s:'1/3',         r:'小サイズ。'},
-        '2pair_weak':{a:'CHECK',  s:'−',           r:'弱2ペアはチェック。'},
-        tptk:      {a:'BET/CHECK',s:'1/3',         r:'TPTKはナッツFDなければ慎重。'},
-        tpwk:      {a:'CHECK',    s:'−',           r:'弱TPはチェック。'},
-        mp:        {a:'CHECK',    s:'−',           r:'チェック。'},
-        bp:        {a:'CHECK',    s:'−',           r:'チェック。'},
-        nfd:       {a:'BET',      s:'1/2',         r:'ナッツFDは最強。積極的セミブラフ。'},
-        fd:        {a:'CHECK/BET',s:'1/3',         r:'非ナッツFD頻度ベット。'},
-        oesd:      {a:'CHECK',    s:'−',           r:'FDなしOESDはチェック。'},
-        gs:        {a:'CHECK',    s:'−',           r:'GSはチェック。'},
-        bdfd:      {a:'BET/CHECK',s:'1/3',         r:'BDFDも頻度CBet。'},
-        air:       {a:'BET/CHECK',s:'1/3',         r:'エアーも頻度ブラフ。モノトーンIPはレンジ有利。'},
+        nuts:      {a:'BET',      s:'1/3',       r:'モノトーン3betも小サイズ高頻度。3betIPは広くCBetする戦略のため。'},
+        op:        {a:'BET/CHECK',s:'1/3',       r:'ナッツFDなければ慎重に。'},
+        '2pair_str':{a:'BET',     s:'1/3',       r:'小サイズ。'},
+        '2pair_weak':{a:'CHECK',  s:'−',         r:'弱2ペアはチェック。'},
+        tptk:      {a:'BET/CHECK',s:'1/3',       r:'TPTKはナッツFDなければ慎重。'},
+        tpwk:      {a:'CHECK',    s:'−',         r:'弱TPはチェック。'},
+        mp:        {a:'CHECK',    s:'−',         r:'チェック。'},
+        bp:        {a:'CHECK',    s:'−',         r:'チェック。'},
+        nfd:       {a:'BET',      s:'1/2',       r:'ナッツFDは最強。3betポットのモノトーンで積極的セミブラフ。'},
+        fd:        {a:'CHECK/BET',s:'1/3',       r:'非ナッツFD頻度ベット。'},
+        oesd:      {a:'CHECK',    s:'−',         r:'FDなしOESDはチェック。'},
+        gs:        {a:'CHECK',    s:'−',         r:'GSはチェック。'},
+        bdfd:      {a:'BET/CHECK',s:'1/3',       r:'BDFDも頻度CBet。'},
+        air:       {a:'BET/CHECK',s:'1/3',       r:'エアーも頻度ブラフ。モノトーン3betIPはレンジ有利。'},
       },
       paired:{
-        nuts:      {a:'BET',      s:'1/3',         r:'ペア3betも小サイズ高頻度。'},
-        op:        {a:'BET',      s:'1/3',         r:'高頻度。'},
-        '2pair_str':{a:'BET',     s:'1/3',         r:'高頻度。'},
-        '2pair_weak':{a:'BET',    s:'1/3',         r:'高頻度。'},
-        tptk:      {a:'BET',      s:'1/3',         r:'ほぼ全レンジCBet。'},
-        tpwk:      {a:'BET',      s:'1/3',         r:'弱TPも高頻度。'},
-        mp:        {a:'BET/CHECK',s:'1/3',         r:'頻度ベット。'},
-        bp:        {a:'CHECK',    s:'−',           r:'ボトムペアはチェック。'},
-        nfd:       {a:'BET',      s:'1/2',         r:'ナッツFDはセミブラフ。'},
-        fd:        {a:'BET/CHECK',s:'1/3',         r:'FD頻度ベット。'},
-        oesd:      {a:'BET/CHECK',s:'1/3',         r:'頻度ベット。'},
-        gs:        {a:'BET/CHECK',s:'1/3',         r:'頻度ベット。'},
-        bdfd:      {a:'BET/CHECK',s:'1/3',         r:'BDFDも頻度ベット。'},
-        air:       {a:'BET/CHECK',s:'1/3',         r:'エアーも高頻度CBet。'},
+        nuts:      {a:'BET',      s:'1/3',       r:'ペア3betも小サイズ高頻度。3betIPはほぼ全レンジCBet。'},
+        op:        {a:'BET',      s:'1/3',       r:'高頻度。'},
+        '2pair_str':{a:'BET',     s:'1/3',       r:'高頻度。'},
+        '2pair_weak':{a:'BET',    s:'1/3',       r:'高頻度。'},
+        tptk:      {a:'BET',      s:'1/3',       r:'ほぼ全レンジCBet。'},
+        tpwk:      {a:'BET',      s:'1/3',       r:'弱TPも高頻度。'},
+        mp:        {a:'BET/CHECK',s:'1/3',       r:'頻度ベット。'},
+        bp:        {a:'CHECK',    s:'−',         r:'ボトムペアはチェック。'},
+        nfd:       {a:'BET',      s:'1/2',       r:'ナッツFDはセミブラフ。'},
+        fd:        {a:'BET/CHECK',s:'1/3',       r:'FD頻度ベット。'},
+        oesd:      {a:'BET/CHECK',s:'1/3',       r:'頻度ベット。'},
+        gs:        {a:'BET/CHECK',s:'1/3',       r:'頻度ベット。'},
+        bdfd:      {a:'BET/CHECK',s:'1/3',       r:'BDFDも頻度ベット。'},
+        air:       {a:'BET/CHECK',s:'1/3',       r:'エアーも高頻度CBet。'},
       },
       low:{
-        nuts:      {a:'BET',      s:'1/3',         r:'ローボード3betも小サイズ高頻度。'},
-        op:        {a:'BET',      s:'1/3',         r:'オーバーペアは強い。高頻度。'},
-        '2pair_str':{a:'BET',     s:'1/3〜1/2',   r:'中サイズ。'},
-        '2pair_weak':{a:'BET',    s:'1/3',         r:'高頻度。'},
-        tptk:      {a:'BET',      s:'1/3',         r:'高頻度CBet。'},
-        tpwk:      {a:'BET',      s:'1/3',         r:'ローボードIPは広くベット。'},
-        mp:        {a:'BET',      s:'1/3',         r:'ミドルペアも頻度ベット。'},
-        bp:        {a:'BET/CHECK',s:'1/3',         r:'ボトムペアも頻度ベット。ローIPは超高頻度CBet。'},
-        nfd:       {a:'BET',      s:'1/2',         r:'ナッツFD。'},
-        fd:        {a:'BET',      s:'1/3',         r:'FD積極的。'},
-        oesd:      {a:'BET',      s:'1/3〜1/2',   r:'OESDは強力。'},
-        gs:        {a:'BET/CHECK',s:'1/3',         r:'GS頻度ベット。'},
-        bdfd:      {a:'BET',      s:'1/3',         r:'BDFDもCBet。ローIPはほぼ全レンジ。'},
-        air:       {a:'BET',      s:'1/3',         r:'GTO Wizard: ローボードIPはエアーもほぼ全レンジCBet。レンジベット戦略。'},
+        nuts:      {a:'BET',      s:'1/3',       r:'ローボード3betも小サイズ高頻度。IPはほぼ全レンジCBet。'},
+        op:        {a:'BET',      s:'1/3',       r:'オーバーペアは強い。高頻度。'},
+        '2pair_str':{a:'BET',     s:'1/3〜1/2', r:'中サイズ。'},
+        '2pair_weak':{a:'BET',    s:'1/3',       r:'高頻度。'},
+        tptk:      {a:'BET',      s:'1/3',       r:'高頻度CBet。'},
+        tpwk:      {a:'BET',      s:'1/3',       r:'ローボードIPは広くベット。'},
+        mp:        {a:'BET',      s:'1/3',       r:'ミドルペアも頻度ベット。'},
+        bp:        {a:'BET/CHECK',s:'1/3',       r:'ボトムペアも頻度ベット。ロー3betIPは超高頻度CBet。'},
+        nfd:       {a:'BET',      s:'1/2',       r:'ナッツFD。'},
+        fd:        {a:'BET',      s:'1/3',       r:'FD積極的。'},
+        oesd:      {a:'BET',      s:'1/3〜1/2', r:'OESDは強力。'},
+        gs:        {a:'BET/CHECK',s:'1/3',       r:'GS頻度ベット。'},
+        bdfd:      {a:'BET',      s:'1/3',       r:'BDFDもCBet。ロー3betIPはほぼ全レンジ。'},
+        air:       {a:'BET',      s:'1/3',       r:'GTO Wizard: ローボード3betIPはエアーもほぼ全レンジCBet。レンジベット戦略。'},
       },
     },
     oop:{
-      // GTO Wizard: OOP3betterはSPR低くIP並みに高頻度CBet
       dryhigh:{
-        nuts:      {a:'BET/CHECK',s:'1/3',         r:'GTO Wizard: OOP3betterはAハイドライで小ドンク or チェックレイズ。40bbなら全レンジベット可。'},
-        op:        {a:'BET',      s:'1/3',         r:'オーバーペアは小サイズ。100bbではチェックも増える。'},
-        '2pair_str':{a:'CHECK',   s:'−',           r:'チェックレイズ狙い。'},
-        '2pair_weak':{a:'CHECK',  s:'−',           r:'チェック。'},
-        tptk:      {a:'BET/CHECK',s:'1/3',         r:'GTO Wizard: AハイはOOP3betでも高頻度CBet可。小サイズ。ただし100bbは弱Axチェック増加。'},
-        tpwk:      {a:'CHECK',    s:'−',           r:'弱TPはチェック。100bbではチェック多い。'},
-        mp:        {a:'CHECK',    s:'−',           r:'チェック。'},
-        bp:        {a:'CHECK',    s:'−',           r:'チェック。'},
-        nfd:       {a:'CHECK',    s:'−',           r:'ナッツFDはチェックレイズ。'},
-        fd:        {a:'CHECK',    s:'−',           r:'FDはチェック。'},
-        oesd:      {a:'CHECK',    s:'−',           r:'OESDはチェック。'},
-        gs:        {a:'CHECK',    s:'−',           r:'GSはチェック。'},
-        bdfd:      {a:'CHECK',    s:'−',           r:'BDFDはチェック。'},
-        air:       {a:'CHECK',    s:'−',           r:'エアーはチェック。'},
+        nuts:      {a:'BET/CHECK',s:'1/3',       r:'GTO Wizard: OOP3betterはAハイドライで小ドンク or チェックレイズ。SPR低ければ全レンジベット可。相手のコーリングレンジに対して早期に価値を取る。'},
+        op:        {a:'BET',      s:'1/3',       r:'オーバーペアは小サイズ。3betOOPではSPR低くIPより積極的にCBet可。'},
+        '2pair_str':{a:'CHECK',   s:'−',         r:'チェックレイズ狙い。'},
+        '2pair_weak':{a:'CHECK',  s:'−',         r:'チェック。'},
+        tptk:      {a:'BET/CHECK',s:'1/3',       r:'GTO Wizard: AハイはOOP3betでも高頻度CBet可。小サイズ。100bbでは弱Axチェック増加するがSPRが低ければベット多め。'},
+        tpwk:      {a:'CHECK',    s:'−',         r:'弱TPはチェック。SPRが低くても弱いTPはチェックを選ぶ。'},
+        mp:        {a:'CHECK',    s:'−',         r:'チェック。'},
+        bp:        {a:'CHECK',    s:'−',         r:'チェック。'},
+        nfd:       {a:'CHECK',    s:'−',         r:'ナッツFDはチェックレイズ。'},
+        fd:        {a:'CHECK',    s:'−',         r:'FDはチェック。'},
+        oesd:      {a:'CHECK',    s:'−',         r:'OESDはチェック。'},
+        gs:        {a:'CHECK',    s:'−',         r:'GSはチェック。'},
+        bdfd:      {a:'CHECK',    s:'−',         r:'BDFDはチェック。'},
+        air:       {a:'CHECK',    s:'−',         r:'エアーはチェック。'},
       },
       drymid:{
-        nuts:      {a:'BET',      s:'1/3',         r:'GTO Wizard: ミッドドライOOP3betは小ドンク頻度高い。'},
-        op:        {a:'BET/CHECK',s:'1/3',         r:'オーバーペアは小サイズorチェック。'},
-        '2pair_str':{a:'CHECK',   s:'−',           r:'チェックレイズ。'},
-        '2pair_weak':{a:'CHECK',  s:'−',           r:'チェック。'},
-        tptk:      {a:'CHECK/BET',s:'1/3',         r:'TPTKは頻度でCBet。チェックもある。'},
-        tpwk:      {a:'CHECK',    s:'−',           r:'弱TPはチェック。'},
-        mp:        {a:'CHECK',    s:'−',           r:'チェック。'},
-        bp:        {a:'CHECK',    s:'−',           r:'チェック。'},
-        nfd:       {a:'CHECK',    s:'−',           r:'ナッツFDはチェックレイズ。'},
-        fd:        {a:'CHECK',    s:'−',           r:'FDはチェック。'},
-        oesd:      {a:'CHECK',    s:'−',           r:'OESDはチェック。'},
-        gs:        {a:'CHECK',    s:'−',           r:'GSはチェック。'},
-        bdfd:      {a:'CHECK',    s:'−',           r:'BDFDはチェック。'},
-        air:       {a:'CHECK',    s:'−',           r:'エアーはチェック。'},
+        nuts:      {a:'BET',      s:'1/3',       r:'GTO Wizard: ミッドドライOOP3betは小ドンク頻度高い。SPRが低くOOPの3betterがレンジ優位なため。'},
+        op:        {a:'BET/CHECK',s:'1/3',       r:'オーバーペアは小サイズorチェック。'},
+        '2pair_str':{a:'CHECK',   s:'−',         r:'チェックレイズ。'},
+        '2pair_weak':{a:'CHECK',  s:'−',         r:'チェック。'},
+        tptk:      {a:'CHECK/BET',s:'1/3',       r:'TPTKは頻度でCBet。チェックもある。'},
+        tpwk:      {a:'CHECK',    s:'−',         r:'弱TPはチェック。'},
+        mp:        {a:'CHECK',    s:'−',         r:'チェック。'},
+        bp:        {a:'CHECK',    s:'−',         r:'チェック。'},
+        nfd:       {a:'CHECK',    s:'−',         r:'ナッツFDはチェックレイズ。'},
+        fd:        {a:'CHECK',    s:'−',         r:'FDはチェック。'},
+        oesd:      {a:'CHECK',    s:'−',         r:'OESDはチェック。'},
+        gs:        {a:'CHECK',    s:'−',         r:'GSはチェック。'},
+        bdfd:      {a:'CHECK',    s:'−',         r:'BDFDはチェック。'},
+        air:       {a:'CHECK',    s:'−',         r:'エアーはチェック。'},
       },
       wet:{
-        nuts:      {a:'BET/CHECK',s:'2/3',         r:'GTO Wizard: ウェットOOP3betのナッツは大サイズドンク有効。保護+価値。'},
-        op:        {a:'BET/CHECK',s:'1/2',         r:'オーバーペアは保護ドンクorチェックレイズ。'},
-        '2pair_str':{a:'BET/CHECK',s:'1/2',        r:'強2ペアは保護必須。'},
-        '2pair_weak':{a:'CHECK',  s:'−',           r:'弱2ペアはチェック。'},
-        tptk:      {a:'CHECK',    s:'−',           r:'ウェットOOPのTPはチェック。'},
-        tpwk:      {a:'CHECK',    s:'−',           r:'チェック。'},
-        mp:        {a:'CHECK',    s:'−',           r:'チェック。'},
-        bp:        {a:'CHECK',    s:'−',           r:'チェック。'},
-        nfd:       {a:'CHECK/BET',s:'1/2',         r:'ナッツFDはドンクorチェックレイズ。'},
-        fd:        {a:'CHECK',    s:'−',           r:'FDはチェック。'},
-        oesd:      {a:'CHECK',    s:'−',           r:'OESDはチェック。'},
-        gs:        {a:'CHECK',    s:'−',           r:'GSはチェック。'},
-        bdfd:      {a:'CHECK',    s:'−',           r:'BDFDはチェック。'},
-        air:       {a:'CHECK',    s:'−',           r:'エアーはチェック。'},
+        nuts:      {a:'BET/CHECK',s:'2/3',       r:'GTO Wizard: ウェットOOP3betのナッツは大サイズドンク有効。低SPRで保護+価値を最大化。相手のドローコールに対して今すぐ価値を取る。'},
+        op:        {a:'BET/CHECK',s:'1/2',       r:'オーバーペアは保護ドンクorチェックレイズ。3betポット低SPRで早期に価値を確定させる。'},
+        '2pair_str':{a:'BET/CHECK',s:'1/2',      r:'強2ペアは保護必須。3betポットのウェットでは即座に価値を取る。'},
+        '2pair_weak':{a:'CHECK',  s:'−',         r:'弱2ペアはチェック。'},
+        tptk:      {a:'CHECK',    s:'−',         r:'ウェットOOPのTPはチェック。チェックレイズで守る。'},
+        tpwk:      {a:'CHECK',    s:'−',         r:'チェック。'},
+        mp:        {a:'CHECK',    s:'−',         r:'チェック。'},
+        bp:        {a:'CHECK',    s:'−',         r:'チェック。'},
+        nfd:       {a:'CHECK/BET',s:'1/2',       r:'ナッツFDはドンクorチェックレイズ。3betOOPでのナッツFDは非常に強力。'},
+        fd:        {a:'CHECK',    s:'−',         r:'FDはチェック。'},
+        oesd:      {a:'CHECK',    s:'−',         r:'OESDはチェック。'},
+        gs:        {a:'CHECK',    s:'−',         r:'GSはチェック。'},
+        bdfd:      {a:'CHECK',    s:'−',         r:'BDFDはチェック。'},
+        air:       {a:'CHECK',    s:'−',         r:'エアーはチェック。'},
       },
       mono:{
-        nuts:      {a:'CHECK',    s:'−',           r:'GTO Wizard: モノトーンOOPはほぼチェック。チェックレイズ狙い。'},
-        op:        {a:'CHECK',    s:'−',           r:'チェックレイズ。'},
-        '2pair_str':{a:'CHECK',   s:'−',           r:'チェックレイズ。'},
-        '2pair_weak':{a:'CHECK',  s:'−',           r:'チェック。'},
-        tptk:      {a:'CHECK',    s:'−',           r:'チェック。'},
-        tpwk:      {a:'CHECK',    s:'−',           r:'チェック。'},
-        mp:        {a:'CHECK',    s:'−',           r:'チェック。'},
-        bp:        {a:'CHECK',    s:'−',           r:'チェック。'},
-        nfd:       {a:'BET/CHECK',s:'1/3',         r:'ナッツFDのみドンクベット有効。'},
-        fd:        {a:'CHECK',    s:'−',           r:'非ナッツFDはチェック。'},
-        oesd:      {a:'CHECK',    s:'−',           r:'OESDはチェック。'},
-        gs:        {a:'CHECK',    s:'−',           r:'GSはチェック。'},
-        bdfd:      {a:'CHECK',    s:'−',           r:'BDFDはチェック。'},
-        air:       {a:'CHECK',    s:'−',           r:'エアーはチェック。'},
+        nuts:      {a:'CHECK',    s:'−',         r:'GTO Wizard: モノトーンOOPはほぼチェック。チェックレイズ狙い。'},
+        op:        {a:'CHECK',    s:'−',         r:'チェックレイズ。'},
+        '2pair_str':{a:'CHECK',   s:'−',         r:'チェックレイズ。'},
+        '2pair_weak':{a:'CHECK',  s:'−',         r:'チェック。'},
+        tptk:      {a:'CHECK',    s:'−',         r:'チェック。'},
+        tpwk:      {a:'CHECK',    s:'−',         r:'チェック。'},
+        mp:        {a:'CHECK',    s:'−',         r:'チェック。'},
+        bp:        {a:'CHECK',    s:'−',         r:'チェック。'},
+        nfd:       {a:'BET/CHECK',s:'1/3',       r:'ナッツFDのみドンクベット有効。3betOOPのナッツFDは非常に強力。'},
+        fd:        {a:'CHECK',    s:'−',         r:'非ナッツFDはチェック。'},
+        oesd:      {a:'CHECK',    s:'−',         r:'OESDはチェック。'},
+        gs:        {a:'CHECK',    s:'−',         r:'GSはチェック。'},
+        bdfd:      {a:'CHECK',    s:'−',         r:'BDFDはチェック。'},
+        air:       {a:'CHECK',    s:'−',         r:'エアーはチェック。'},
       },
       paired:{
-        nuts:      {a:'BET/CHECK',s:'1/3',         r:'ペアOOP3betのナッツは小ドンクorチェックレイズ。'},
-        op:        {a:'BET/CHECK',s:'1/3',         r:'オーバーペアは小ドンクorチェック。'},
-        '2pair_str':{a:'CHECK',   s:'−',           r:'チェックレイズ。'},
-        '2pair_weak':{a:'CHECK',  s:'−',           r:'チェック。'},
-        tptk:      {a:'BET/CHECK',s:'1/3',         r:'TPTKは頻度でCBet。'},
-        tpwk:      {a:'CHECK',    s:'−',           r:'チェック。'},
-        mp:        {a:'CHECK',    s:'−',           r:'チェック。'},
-        bp:        {a:'CHECK',    s:'−',           r:'チェック。'},
-        nfd:       {a:'CHECK',    s:'−',           r:'ナッツFDはチェックレイズ。'},
-        fd:        {a:'CHECK',    s:'−',           r:'FDはチェック。'},
-        oesd:      {a:'CHECK',    s:'−',           r:'OESDはチェック。'},
-        gs:        {a:'CHECK',    s:'−',           r:'GSはチェック。'},
-        bdfd:      {a:'CHECK',    s:'−',           r:'BDFDはチェック。'},
-        air:       {a:'CHECK',    s:'−',           r:'エアーはチェック。'},
+        nuts:      {a:'BET/CHECK',s:'1/3',       r:'ペアOOP3betのナッツは小ドンクorチェックレイズ。3betポットではSPR低く積極的に。'},
+        op:        {a:'BET/CHECK',s:'1/3',       r:'オーバーペアは小ドンクorチェック。'},
+        '2pair_str':{a:'CHECK',   s:'−',         r:'チェックレイズ。'},
+        '2pair_weak':{a:'CHECK',  s:'−',         r:'チェック。'},
+        tptk:      {a:'BET/CHECK',s:'1/3',       r:'TPTKは頻度でCBet。'},
+        tpwk:      {a:'CHECK',    s:'−',         r:'チェック。'},
+        mp:        {a:'CHECK',    s:'−',         r:'チェック。'},
+        bp:        {a:'CHECK',    s:'−',         r:'チェック。'},
+        nfd:       {a:'CHECK',    s:'−',         r:'ナッツFDはチェックレイズ。'},
+        fd:        {a:'CHECK',    s:'−',         r:'FDはチェック。'},
+        oesd:      {a:'CHECK',    s:'−',         r:'OESDはチェック。'},
+        gs:        {a:'CHECK',    s:'−',         r:'GSはチェック。'},
+        bdfd:      {a:'CHECK',    s:'−',         r:'BDFDはチェック。'},
+        air:       {a:'CHECK',    s:'−',         r:'エアーはチェック。'},
       },
       low:{
-        // GTO Wizard: OOP3bet on 654r — 40bbでは全レンジベット。100bbはチェック増加
-        nuts:      {a:'BET',      s:'1/3',         r:'GTO Wizard: ローOOP3betは40bbで全レンジベット。100bbはSPR高くチェック増える。ペアはナッツ扱い。'},
-        op:        {a:'BET',      s:'1/3〜1/2',   r:'オーバーペアはローで強い。ベット推奨。'},
-        '2pair_str':{a:'BET/CHECK',s:'1/3',        r:'強2ペアはドンクorチェックレイズ。'},
-        '2pair_weak':{a:'CHECK',  s:'−',           r:'チェック。'},
-        tptk:      {a:'CHECK',    s:'−',           r:'ローOOPのTPはチェック。'},
-        tpwk:      {a:'CHECK',    s:'−',           r:'チェック。'},
-        mp:        {a:'CHECK',    s:'−',           r:'チェック。'},
-        bp:        {a:'CHECK',    s:'−',           r:'チェック。'},
-        nfd:       {a:'CHECK/BET',s:'1/3',         r:'ナッツFDはセミブラフorチェックレイズ。'},
-        fd:        {a:'CHECK',    s:'−',           r:'FDはチェック。'},
-        oesd:      {a:'CHECK/BET',s:'1/3',         r:'OESDは頻度でドンクベット。'},
-        gs:        {a:'CHECK',    s:'−',           r:'GSはチェック。'},
-        bdfd:      {a:'CHECK',    s:'−',           r:'BDFDはチェック。'},
-        air:       {a:'CHECK',    s:'−',           r:'エアーはチェック。100bbでは特にチェック。'},
+        nuts:      {a:'BET',      s:'1/3',       r:'GTO Wizard: ローOOP3betは40bbで全レンジベット。100bbはSPR高くチェック増える。低SPRで全レンジCBetが成立する。'},
+        op:        {a:'BET',      s:'1/3〜1/2', r:'オーバーペアはローで強い。3betOOPでも積極的にベット推奨。'},
+        '2pair_str':{a:'BET/CHECK',s:'1/3',      r:'強2ペアはドンクorチェックレイズ。'},
+        '2pair_weak':{a:'CHECK',  s:'−',         r:'チェック。'},
+        tptk:      {a:'CHECK',    s:'−',         r:'ローOOPのTPはチェック。'},
+        tpwk:      {a:'CHECK',    s:'−',         r:'チェック。'},
+        mp:        {a:'CHECK',    s:'−',         r:'チェック。'},
+        bp:        {a:'CHECK',    s:'−',         r:'チェック。'},
+        nfd:       {a:'CHECK/BET',s:'1/3',       r:'ナッツFDはセミブラフorチェックレイズ。'},
+        fd:        {a:'CHECK',    s:'−',         r:'FDはチェック。'},
+        oesd:      {a:'CHECK/BET',s:'1/3',       r:'OESDは頻度でドンクベット。'},
+        gs:        {a:'CHECK',    s:'−',         r:'GSはチェック。'},
+        bdfd:      {a:'CHECK',    s:'−',         r:'BDFDはチェック。'},
+        air:       {a:'CHECK',    s:'−',         r:'エアーはチェック。100bbでは特にチェック。'},
       },
     },
   },
 };
 
-// ===== FLOP モード管理 =====
-let flopMode='card'; // 'card' | 'tex'
+// フロップ行動順: BTN > CO > HJ > LJ > UTG+2 > UTG+1 > UTG > SB > BB
+const FW_ACT_ORDER={BTN:9,CO:8,HJ:7,LJ:6,'UTG+2':5,'UTG+1':4,UTG:3,SB:2,BB:1};
+let fw={step:1,holeR:[null,null],holeS:[null,null],pot:'srp',myPos:null,oppPos:null,ipOop:null,flopR:[null,null,null],flopS:[null,null,null],tex:null,hand:null};
 
-function setFlopMode(m){
-  flopMode=m;
-  document.getElementById('flop-mode-card').style.display=m==='card'?'':'none';
-  document.getElementById('flop-mode-tex').style.display=m==='tex'?'':'none';
-  document.getElementById('fm-card').style.color=m==='card'?'var(--text)':'var(--muted)';
-  document.getElementById('fm-card').style.borderBottomColor=m==='card'?'var(--accent)':'transparent';
-  document.getElementById('fm-tex').style.color=m==='tex'?'var(--text)':'var(--muted)';
-  document.getElementById('fm-tex').style.borderBottomColor=m==='tex'?'var(--accent)':'transparent';
-  renderFlopResult();
+function fwShowStep(n){
+  [1,2,3,4].forEach(i=>{
+    document.getElementById('fw-s'+i).style.display=i===n?'':'none';
+    const pi=document.getElementById('fwpi'+i);
+    pi.classList.toggle('active',i===n);
+    pi.classList.toggle('done',i<n);
+  });
+  fw.step=n;
+  fwUpdSum();
 }
-
-// ===== FLOP CARD SELECTOR =====
-let flopCards={r:[null,null,null,null,null],s:[null,null,null,null,null]};
-let flopCardState={pot:'srp',pos:'ip',hand:null,tex:null};
-
-function buildFlopRankBtns(){
-  for(let n=1;n<=5;n++){
-    const el=document.getElementById('fh-rr'+n);
-    if(!el)continue;
+function fwGoStep(n){if(n<fw.step)fwShowStep(n);}
+function fwNext(from){
+  if(from===3){fwAutoDetect();fwRenderResult();}
+  fwShowStep(from+1);
+}
+function fwBack(from){fwShowStep(from-1);}
+function fwReset(){
+  fw={step:1,holeR:[null,null],holeS:[null,null],pot:'srp',myPos:null,oppPos:null,ipOop:null,flopR:[null,null,null],flopS:[null,null,null],tex:null,hand:null};
+  for(let n=1;n<=5;n++) R.forEach(r=>{const e=document.getElementById('fwrk'+n+r);if(e)e.classList.remove('active');});
+  ['fwsr1','fwsr2','fwsr3','fwsr4','fwsr5'].forEach(id=>{const el=document.getElementById(id);if(el)el.querySelectorAll('.sb').forEach(b=>b.classList.remove('active'));});
+  ['fwhd1','fwhd2'].forEach(id=>{document.getElementById(id).innerHTML='<div class="cd empty">?</div>';});
+  ['fwfd1','fwfd2','fwfd3'].forEach(id=>{document.getElementById(id).innerHTML='<div class="cd empty">?</div>';});
+  document.getElementById('fw-bdisp').innerHTML='<div class="cd empty">?</div><div class="cd empty">?</div><div class="cd empty">?</div>';
+  document.getElementById('fwpot-srp').classList.add('active');
+  document.getElementById('fwpot-3bet').classList.remove('active');
+  ['fwb1','fwb2','fwb3'].forEach(id=>{const b=document.getElementById(id);if(b)b.disabled=true;});
+  document.getElementById('fw-ipd').style.display='none';
+  document.getElementById('fw-sum').style.display='none';
+  fwBuildMyPos();fwBuildOppPos();
+  fwShowStep(1);
+}
+function fwBuildHoleRank(){
+  for(let n=1;n<=2;n++){
+    const el=document.getElementById('fwrr'+n);if(!el)continue;
     el.innerHTML='';
-    R.forEach(r=>{
-      const b=document.createElement('button');
-      b.className='rb';b.id='fhrk'+n+r;b.textContent=r;
-      b.onclick=()=>selFlopRank(n,r);
-      el.appendChild(b);
-    });
+    R.forEach(r=>{const b=document.createElement('button');b.className='rb';b.id='fwrk'+n+r;b.textContent=r;b.onclick=()=>fwHoleRank(n-1,r);el.appendChild(b);});
   }
 }
-
-function selFlopRank(n,r){
-  flopCards.r[n-1]=r;
-  R.forEach(x=>{const e=document.getElementById('fhrk'+n+x);if(e)e.classList.remove('active');});
-  const e=document.getElementById('fhrk'+n+r);if(e)e.classList.add('active');
-  updFlopCardDisplay();
-  autoDetectHand();
-}
-
-function selFlopCard(n,s){
-  flopCards.s[n-1]=s;
-  const rows=document.querySelectorAll('#flop-mode-card .suit-row');
-  if(rows[n-1]) rows[n-1].querySelectorAll('.sb').forEach((b,i)=>b.classList.toggle('active',i===(['s','h','d','c'].indexOf(s))));
-  updFlopCardDisplay();
-  autoDetectHand();
-}
-
-function updFlopCardDisplay(){
-  const hd=document.getElementById('fh-hole-disp');
-  if(hd){
-    let html='';
-    for(let i=0;i<2;i++){
-      const r=flopCards.r[i],s=flopCards.s[i];
-      if(!r){html+='<div class="cd empty">?</div>';continue;}
-      const sc2=s?SC[s]:'';const isR=s&&REDSUIT.includes(s);
-      html+=`<div class="cd${isR?' rc2':''}"><span>${r}</span><span class="sc">${sc2}</span></div>`;
-    }
-    hd.innerHTML=html;
-  }
-  const bd=document.getElementById('fh-board-disp');
-  if(bd){
-    let html='';
-    for(let i=2;i<5;i++){
-      const r=flopCards.r[i],s=flopCards.s[i];
-      if(!r){html+='<div class="cd empty">?</div>';continue;}
-      const sc2=s?SC[s]:'';const isR=s&&REDSUIT.includes(s);
-      html+=`<div class="cd${isR?' rc2':''}"><span>${r}</span><span class="sc">${sc2}</span></div>`;
-    }
-    bd.innerHTML=html;
+function fwBuildFlopRank(){
+  for(let n=3;n<=5;n++){
+    const el=document.getElementById('fwrr'+n);if(!el)continue;
+    el.innerHTML='';
+    R.forEach(r=>{const b=document.createElement('button');b.className='rb';b.id='fwrk'+n+r;b.textContent=r;b.onclick=()=>fwFlopRank(n-3,r);el.appendChild(b);});
   }
 }
-
-function autoDetectHand(){
-  const[r1,r2,b1,b2,b3]=flopCards.r;
-  const[s1,s2,sb1,sb2,sb3]=flopCards.s;
+function fwHoleRank(i,r){
+  fw.holeR[i]=r;
+  R.forEach(x=>{const e=document.getElementById('fwrk'+(i+1)+x);if(e)e.classList.remove('active');});
+  const e=document.getElementById('fwrk'+(i+1)+r);if(e)e.classList.add('active');
+  fwUpdHoleCard(i);
+  fwUpdBtn('fwb1',fw.holeR[0]&&fw.holeR[1]);
+}
+function fwHoleSuit(i,s){
+  fw.holeS[i]=s;
+  const el=document.getElementById('fwsr'+(i+1));
+  if(el)el.querySelectorAll('.sb').forEach((b,j)=>b.classList.toggle('active',j===['s','h','d','c'].indexOf(s)));
+  fwUpdHoleCard(i);
+  fwUpdBtn('fwb1',fw.holeR[0]&&fw.holeR[1]);
+}
+function fwUpdHoleCard(i){
+  const r=fw.holeR[i],s=fw.holeS[i];
+  const el=document.getElementById('fwhd'+(i+1));if(!el)return;
+  if(!r){el.innerHTML='<div class="cd empty">?</div>';return;}
+  const isR=s&&REDSUIT.includes(s);
+  el.innerHTML='<div class="cd'+(isR?' rc2':'')+'"><span>'+r+'</span><span class="sc">'+(s?SC[s]:'')+'</span></div>';
+}
+function fwFlopRank(i,r){
+  fw.flopR[i]=r;
+  R.forEach(x=>{const e=document.getElementById('fwrk'+(i+3)+x);if(e)e.classList.remove('active');});
+  const e=document.getElementById('fwrk'+(i+3)+r);if(e)e.classList.add('active');
+  fwUpdFlopCard(i);
+  fwUpdBtn('fwb3',fw.flopR[0]&&fw.flopR[1]&&fw.flopR[2]);
+}
+function fwFlopSuit(i,s){
+  fw.flopS[i]=s;
+  const el=document.getElementById('fwsr'+(i+3));
+  if(el)el.querySelectorAll('.sb').forEach((b,j)=>b.classList.toggle('active',j===['s','h','d','c'].indexOf(s)));
+  fwUpdFlopCard(i);
+  fwUpdBtn('fwb3',fw.flopR[0]&&fw.flopR[1]&&fw.flopR[2]);
+}
+function fwUpdFlopCard(i){
+  const r=fw.flopR[i],s=fw.flopS[i];
+  const el=document.getElementById('fwfd'+(i+1));if(!el)return;
+  if(!r){el.innerHTML='<div class="cd empty">?</div>';return;}
+  const isR=s&&REDSUIT.includes(s);
+  el.innerHTML='<div class="cd'+(isR?' rc2':'')+'"><span>'+r+'</span><span class="sc">'+(s?SC[s]:'')+'</span></div>';
+  const bd=document.getElementById('fw-bdisp');
+  if(bd){let h='';for(let j=0;j<3;j++){const rr=fw.flopR[j],ss=fw.flopS[j];if(!rr){h+='<div class="cd empty">?</div>';continue;}const ir=ss&&REDSUIT.includes(ss);h+='<div class="cd'+(ir?' rc2':'')+'"><span>'+rr+'</span><span class="sc">'+(ss?SC[ss]:'')+'</span></div>';}bd.innerHTML=h;}
+}
+function fwUpdBtn(id,ok){const b=document.getElementById(id);if(b)b.disabled=!ok;}
+function fwBuildMyPos(){
+  const el=document.getElementById('fw-mypr');if(!el)return;el.innerHTML='';
+  POS.forEach(p=>{
+    const b=document.createElement('button');
+    b.className='pb'+(fw.myPos===p?' active':'');b.textContent=p;
+    b.onclick=()=>{fw.myPos=p;fw.oppPos=null;fw.ipOop=null;fwBuildMyPos();fwBuildOppPos();fwUpdIPOOP();fwUpdBtn('fwb2',false);};
+    el.appendChild(b);
+  });
+}
+function fwBuildOppPos(){
+  const el=document.getElementById('fw-oppr');if(!el)return;el.innerHTML='';
+  if(!fw.myPos)return;
+  POS.filter(p=>p!==fw.myPos).forEach(p=>{
+    const b=document.createElement('button');
+    b.className='pb'+(fw.oppPos===p?' active':'');b.textContent=p;
+    b.onclick=()=>{fw.oppPos=p;fwBuildOppPos();fwUpdIPOOP();fwUpdBtn('fwb2',true);};
+    el.appendChild(b);
+  });
+}
+function fwUpdIPOOP(){
+  const el=document.getElementById('fw-ipd');if(!el)return;
+  if(!fw.myPos||!fw.oppPos){el.style.display='none';return;}
+  const myO=FW_ACT_ORDER[fw.myPos]||0,opO=FW_ACT_ORDER[fw.oppPos]||0;
+  fw.ipOop=myO>opO?'ip':'oop';
+  const isIP=fw.ipOop==='ip';
+  el.style.display='';
+  el.style.color=isIP?'var(--green)':'var(--amber)';
+  el.innerHTML='あなたは <strong style="font-size:15px;">'+(isIP?'IP（有利 — 後ポジション）':'OOP（不利 — 先ポジション）')+'</strong><br><span style="font-size:10px;color:var(--muted);">フロップ行動順: '+fw.myPos+'は'+fw.oppPos+'より'+(isIP?'後':'先')+'に行動します</span>';
+}
+function fwPot(v,btn){
+  fw.pot=v;
+  document.querySelectorAll('#fwpot-srp,#fwpot-3bet').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+function fwUpdSum(){
+  const el=document.getElementById('fw-sum');if(!el)return;
+  if(fw.step<2){el.style.display='none';return;}
+  const parts=[];
+  if(fw.holeR[0]){
+    const c1=fw.holeS[0]&&REDSUIT.includes(fw.holeS[0])?'#e03030':'var(--text)';
+    const c2=fw.holeS[1]&&REDSUIT.includes(fw.holeS[1])?'#e03030':'var(--text)';
+    parts.push('<span style="color:var(--muted)">ホール: </span><span style="color:'+c1+'">'+fw.holeR[0]+(fw.holeS[0]?SC[fw.holeS[0]]:'')+' </span><span style="color:'+c2+'">'+fw.holeR[1]+(fw.holeS[1]?SC[fw.holeS[1]]:'')+' </span>');
+  }
+  if(fw.step>=3&&fw.myPos&&fw.oppPos){
+    const ipC=fw.ipOop==='ip'?'var(--green)':'var(--amber)';
+    parts.push('<span style="color:var(--muted)">'+(fw.pot==='srp'?'SRP':'3bet')+' · </span>'+fw.myPos+' vs '+fw.oppPos+' <span style="color:'+ipC+'">'+(fw.ipOop==='ip'?'IP':'OOP')+'</span>');
+  }
+  if(fw.step>=4&&fw.flopR[0]){
+    const cs2=fw.flopR.map((r,i)=>{const s=fw.flopS[i];const isR=s&&REDSUIT.includes(s);return'<span style="color:'+(isR?'#e03030':'var(--text)')+'">'+r+(s?SC[s]:'')+' </span>';});
+    parts.push('<span style="color:var(--muted)">フロップ: </span>'+cs2.join(''));
+  }
+  if(!parts.length){el.style.display='none';return;}
+  el.style.display='flex';
+  el.innerHTML=parts.map(p=>'<span>'+p+'</span>').join('<span style="color:var(--border2);margin:0 4px">|</span>');
+}
+function fwAutoDetect(){
+  const[r1,r2]=fw.holeR,[s1,s2]=fw.holeS;
+  const[b1,b2,b3]=fw.flopR,[sb1,sb2,sb3]=fw.flopS;
   if(!r1||!r2||!b1||!b2||!b3)return;
-
-  const RV={'A':14,'K':13,'Q':12,'J':11,'T':10,'9':9,'8':8,'7':7,'6':6,'5':5,'4':4,'3':3,'2':2};
+  const RV={A:14,K:13,Q:12,J:11,T:10,9:9,8:8,7:7,6:6,5:5,4:4,3:3,2:2};
   const h1v=RV[r1],h2v=RV[r2];
   const bv=[RV[b1],RV[b2],RV[b3]].sort((a,b)=>b-a);
-
-  // テクスチャ自動判定
   const boardSuits=[sb1,sb2,sb3].filter(Boolean);
   const allSuits=[s1,s2,sb1,sb2,sb3].filter(Boolean);
   const bvUniq=[...new Set(bv)];
   const isPaired=bvUniq.length<3;
-  const suitCount={};
-  allSuits.forEach(s=>{suitCount[s]=(suitCount[s]||0)+1;});
+  const suitCount={};allSuits.forEach(s=>{suitCount[s]=(suitCount[s]||0)+1;});
   const maxS=Math.max(...Object.values(suitCount));
-  const isMono=new Set(boardSuits).size===1;
+  const isMono=new Set(boardSuits).size===1&&boardSuits.length===3;
   const isFlushDraw=maxS===4;
-  const maxBoardRank=bv[0];
-  const isHigh=maxBoardRank>=10;
-  const isLow=maxBoardRank<=7;
+  const maxBR=bv[0],isHigh=maxBR>=10,isLow=maxBR<=7;
   const connected=bv[0]-bv[bv.length-1]<=4&&bvUniq.length===3;
   let tex='dryhigh';
-  if(isMono) tex='mono';
-  else if(isPaired) tex='paired';
-  else if(isLow&&connected) tex='low';
-  else if(connected&&isFlushDraw) tex='wet';
-  else if(connected) tex='wet';
-  else if(isLow) tex='low';
-  else if(isHigh) tex='dryhigh';
+  if(isMono)tex='mono';
+  else if(isPaired)tex='paired';
+  else if(isLow&&connected)tex='low';
+  else if(connected)tex='wet';
+  else if(isLow)tex='low';
+  else if(isHigh)tex='dryhigh';
   else tex='drymid';
-  flopCardState.tex=tex;
-  // テクスチャボタン更新（カードモードでは非表示だが内部状態は持つ）
-
-  // ハンド判定
-  const hitsBoard1=bv.includes(h1v);
-  const hitsBoard2=bv.includes(h2v);
-  const isPocketPair=h1v===h2v;
-  if(isPocketPair&&hitsBoard1){autoSetHandCard('nuts');return;}
-  if(hitsBoard1&&hitsBoard2){
-    autoSetHandCard(h1v===bv[0]||h2v===bv[0]?'2pair_str':'2pair_weak');return;
-  }
-  if(isPocketPair&&h1v>bv[0]){autoSetHandCard('op');return;}
-  if(hitsBoard1&&h1v===bv[0]){autoSetHandCard(h2v>=10?'tptk':'tpwk');return;}
-  if(hitsBoard2&&h2v===bv[0]){autoSetHandCard(h1v>=10?'tptk':'tpwk');return;}
-  if(hitsBoard1&&h1v===bv[1]){autoSetHandCard('mp');return;}
-  if(hitsBoard2&&h2v===bv[1]){autoSetHandCard('mp');return;}
-  if(hitsBoard1){autoSetHandCard('bp');return;}
-  if(hitsBoard2){autoSetHandCard('bp');return;}
-
-  const flushSuit=Object.keys(suitCount).find(s=>suitCount[s]===maxS);
-  const holeFlush=[s1,s2].filter(s=>s===flushSuit).length;
-  if(isFlushDraw&&holeFlush>=1){
-    autoSetHandCard((r1==='A'&&s1===flushSuit)||(r2==='A'&&s2===flushSuit)?'nfd':'fd');return;
-  }
+  fw.tex=tex;
+  const hb1=bv.includes(h1v),hb2=bv.includes(h2v),isPP=h1v===h2v;
+  if(isPP&&hb1){fw.hand='nuts';return;}
+  if(hb1&&hb2){fw.hand=(h1v===bv[0]||h2v===bv[0])?'2pair_str':'2pair_weak';return;}
+  if(isPP&&h1v>bv[0]){fw.hand='op';return;}
+  if(hb1&&h1v===bv[0]){fw.hand=h2v>=10?'tptk':'tpwk';return;}
+  if(hb2&&h2v===bv[0]){fw.hand=h1v>=10?'tptk':'tpwk';return;}
+  if(hb1&&h1v===bv[1]){fw.hand='mp';return;}
+  if(hb2&&h2v===bv[1]){fw.hand='mp';return;}
+  if(hb1||hb2){fw.hand='bp';return;}
+  const fsuit=Object.keys(suitCount).find(s=>suitCount[s]===maxS);
+  const hf=[s1,s2].filter(s=>s===fsuit).length;
+  if(isFlushDraw&&hf>=1){fw.hand=((r1==='A'&&s1===fsuit)||(r2==='A'&&s2===fsuit))?'nfd':'fd';return;}
   const vals=[h1v,h2v,...bv].sort((a,b)=>a-b);
   const uniq=[...new Set(vals)];
   let maxC=1,cur=1;
   for(let i=1;i<uniq.length;i++){cur=uniq[i]===uniq[i-1]+1?cur+1:1;maxC=Math.max(maxC,cur);}
-  if(maxC>=4){autoSetHandCard('oesd');return;}
-  if(maxC===3){autoSetHandCard('gs');return;}
+  if(maxC>=4){fw.hand='oesd';return;}
+  if(maxC===3){fw.hand='gs';return;}
   const bdfd=boardSuits.filter(s=>[s1,s2].includes(s)).length;
-  if(bdfd>=2){autoSetHandCard('bdfd');return;}
-  autoSetHandCard('air');
+  if(bdfd>=2){fw.hand='bdfd';return;}
+  fw.hand='air';
 }
-
-function autoSetHandCard(hand){
-  flopCardState.hand=hand;
-  const handMap={nuts:0,'2pair_str':1,'2pair_weak':2,tptk:3,tpwk:4,mp:5,bp:6,op:7,nfd:8,fd:9,oesd:10,gs:11,bdfd:12,air:13};
-  document.querySelectorAll('#fhand-grid-card .pb').forEach(b=>b.classList.remove('active'));
-  const btns=document.querySelectorAll('#fhand-grid-card .pb');
-  if(btns[handMap[hand]])btns[handMap[hand]].classList.add('active');
-  renderFlopResult();
-}
-
-function setFlopHandCard(hand){
-  flopCardState.hand=hand;
-  document.querySelectorAll('#fhand-grid-card .pb').forEach(b=>b.classList.remove('active'));
-  event.currentTarget.classList.add('active');
-  renderFlopResult();
-}
-
-// ===== FLOP TEXTURE SELECTOR =====
-let flopTexState={pot:'srp',pos:'ip',tex:'dryhigh',hand:null};
-
-function setFlopTex(v,btn){
-  flopTexState.tex=v;
-  document.querySelectorAll('[id^="ft-"]').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  flopTexState.hand=null;
-  document.querySelectorAll('#fhand-grid-tex .pb').forEach(b=>b.classList.remove('active'));
-  renderFlopResult();
-}
-
-function setFlopHandTex(hand){
-  flopTexState.hand=hand;
-  document.querySelectorAll('#fhand-grid-tex .pb').forEach(b=>b.classList.remove('active'));
-  event.currentTarget.classList.add('active');
-  renderFlopResult();
-}
-
-// ===== 共通設定 =====
-function setFlopPot(v,btn){
-  flopCardState.pot=v; flopTexState.pot=v;
-  document.querySelectorAll('#fp-srp,#fp-3bet').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  renderFlopResult();
-}
-function setFlopPos(v,btn){
-  flopCardState.pos=v; flopTexState.pos=v;
-  document.querySelectorAll('#fp-ip,#fp-oop').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  renderFlopResult();
-}
-
-// ===== 結果表示 =====
-function renderFlopResult(){
-  const el=document.getElementById('flop-result');
-  let pot,pos,tex,hand;
-  if(flopMode==='card'){
-    if(!flopCardState.hand||!flopCardState.tex){
-      el.innerHTML='<span style="color:var(--muted);font-size:13px;font-family:\'DM Mono\',monospace;">ホールカードとフロップを入力してください</span>';return;
-    }
-    pot=flopCardState.pot;pos=flopCardState.pos;tex=flopCardState.tex;hand=flopCardState.hand;
-  } else {
-    if(!flopTexState.hand){
-      el.innerHTML='<span style="color:var(--muted);font-size:13px;font-family:\'DM Mono\',monospace;">テクスチャとハンドカテゴリを選んでください</span>';return;
-    }
-    pot=flopTexState.pot;pos=flopTexState.pos;tex=flopTexState.tex;hand=flopTexState.hand;
-  }
-  const d=FLOP[pot]?.[pos]?.[tex]?.[hand];
-  if(!d){el.innerHTML='<span style="color:var(--muted);font-size:13px;font-family:\'DM Mono\',monospace;">このシナリオのデータなし</span>';return;}
-
+function fwRenderResult(){
+  const el=document.getElementById('fw-result');if(!el)return;
   const texN={dryhigh:'ドライハイ',drymid:'ドライミッド',wet:'ウェット',mono:'モノトーン',paired:'ペアボード',low:'ローボード'};
-  const handN={nuts:'ナッツ',op:'オーバーペア','2pair_str':'強2ペア','2pair_weak':'弱2ペア',tptk:'TPTK',tpwk:'TPWK',mp:'ミドルペア',bp:'ボトムペア',nfd:'ナッツFD',fd:'FD',oesd:'OESD',gs:'ガットショット',bdfd:'BDFD',air:'エアー'};
-  const potN=pot==='srp'?'SRP':'3betポット';
-  const posN=pos==='ip'?'IP':'OOP';
-  const isBet=d.a.startsWith('BET')&&!d.a.includes('/');
-  const isMix=d.a.includes('/')&&d.a.includes('BET');
-  const aColor=isBet?'var(--red)':isMix?'var(--amber)':'var(--muted)';
-  const aBg=isBet?'rgba(224,48,48,.1)':isMix?'rgba(212,134,26,.1)':'rgba(255,255,255,.03)';
-  const aBorder=isBet?'var(--red)':isMix?'var(--amber)':'var(--border2)';
-
-  // カードモードの場合、実際のカードも表示
-  let cardStr='';
-  if(flopMode==='card'&&flopCards.r[0]){
-    const cards=[];
-    for(let i=0;i<5;i++){
-      if(!flopCards.r[i])continue;
-      const isR=flopCards.s[i]&&REDSUIT.includes(flopCards.s[i]);
-      cards.push(`<span style="color:${isR?'#e03030':'var(--text)'}">${flopCards.r[i]}${flopCards.s[i]?SC[flopCards.s[i]]:''}</span>`);
-    }
-    cardStr=`<div style="font-size:18px;margin-bottom:8px;">${cards.slice(0,2).join(' ')} <span style="color:var(--muted);font-size:12px;">vs</span> ${cards.slice(2).join(' ')}</div>`;
-  }
-
-  el.innerHTML=`<div style="width:100%">
-    <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:12px;">${potN} · ${posN} · ${texN[tex]} · ${handN[hand]||hand}</div>
-    ${cardStr}
-    <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;flex-wrap:wrap;">
-      <div style="background:${aBg};border:1px solid ${aBorder};border-radius:6px;padding:10px 28px;font-family:'DM Mono',monospace;font-size:24px;font-weight:500;color:${aColor};">${d.a}</div>
-      ${d.s!=='−'?`<div style="background:var(--surface2);border:.5px solid var(--border2);border-radius:6px;padding:10px 18px;font-family:'DM Mono',monospace;font-size:15px;color:var(--text);">サイズ: ${d.s} pot</div>`:''}
-    </div>
-    <div style="font-size:13px;color:var(--muted);line-height:1.8;font-family:'DM Mono',monospace;">${d.r}</div>
-  </div>`;
+  const handN={nuts:'ナッツ/セット以上',op:'オーバーペア','2pair_str':'強2ペア','2pair_weak':'弲2ペア',tptk:'TPTK（TP強Kicker）',tpwk:'TPWK（TP弱Kicker）',mp:'ミドルペア',bp:'ボトムペア',nfd:'ナッツFD',fd:'FD（非ナッツ）',oesd:'OESD（両面SD）',gs:'ガットショット',bdfd:'BDFD（バックドアFD）',air:'エアー'};
+  function crd(r,s){if(!r)return'<div class="cd empty">?</div>';const isR=s&&REDSUIT.includes(s);return'<div class="cd'+(isR?' rc2':'')+'"><span>'+r+'</span><span class="sc">'+(s?SC[s]:'')+'</span></div>';}
+  const holeH=crd(fw.holeR[0],fw.holeS[0])+crd(fw.holeR[1],fw.holeS[1]);
+  const brdH=crd(fw.flopR[0],fw.flopS[0])+crd(fw.flopR[1],fw.flopS[1])+crd(fw.flopR[2],fw.flopS[2]);
+  if(!fw.tex||!fw.hand){el.innerHTML='<span style="color:var(--muted);font-family:\'DM Mono\',monospace;font-size:13px;">カード情報が不完全です</span>';return;}
+  const fd=FLOP_DATA[fw.pot]&&FLOP_DATA[fw.pot][fw.ipOop]&&FLOP_DATA[fw.pot][fw.ipOop][fw.tex]&&FLOP_DATA[fw.pot][fw.ipOop][fw.tex][fw.hand];
+  if(!fd){el.innerHTML='<span style="color:var(--muted);font-family:\'DM Mono\',monospace;font-size:13px;">このシナリオのデータなし</span>';return;}
+  const isBet=fd.a.startsWith('BET')&&!fd.a.includes('/');
+  const isMix=fd.a.includes('/')&&fd.a.includes('BET');
+  const ac=isBet?'var(--red)':isMix?'var(--amber)':'var(--muted)';
+  const ab=isBet?'rgba(224,48,48,.1)':isMix?'rgba(212,134,26,.1)':'rgba(255,255,255,.03)';
+  const ao=isBet?'var(--red)':isMix?'var(--amber)':'var(--border2)';
+  el.innerHTML=
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:18px;">'+
+      '<div style="display:flex;gap:6px;">'+holeH+'</div>'+
+      '<div style="font-family:\'DM Mono\',monospace;font-size:16px;color:var(--muted);margin:0 6px;">vs</div>'+
+      '<div style="display:flex;gap:6px;">'+brdH+'</div>'+
+    '</div>'+
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;font-family:\'DM Mono\',monospace;font-size:11px;margin-bottom:16px;">'+
+      '<span style="background:var(--surface2);padding:3px 8px;border-radius:3px;">'+(fw.pot==='srp'?'SRP':'3betポット')+'</span>'+
+      '<span style="background:var(--surface2);padding:3px 8px;border-radius:3px;">'+fw.myPos+' vs '+fw.oppPos+'</span>'+
+      '<span style="background:var(--surface2);padding:3px 8px;border-radius:3px;color:'+(fw.ipOop==='ip'?'var(--green)':'var(--amber)')+';">'+(fw.ipOop==='ip'?'IP（有利）':'OOP（不利）')+'</span>'+
+      '<span style="background:var(--surface2);padding:3px 8px;border-radius:3px;">'+(texN[fw.tex]||fw.tex)+'</span>'+
+      '<span style="background:var(--surface2);padding:3px 8px;border-radius:3px;">'+(handN[fw.hand]||fw.hand)+'</span>'+
+    '</div>'+
+    '<div style="display:flex;align-items:center;gap:14px;margin-bottom:18px;flex-wrap:wrap;">'+
+      '<div style="background:'+ab+';border:1px solid '+ao+';border-radius:6px;padding:10px 28px;font-family:\'DM Mono\',monospace;font-size:24px;font-weight:500;color:'+ac+';">'+fd.a+'</div>'+
+      (fd.s!=='−'?'<div style="background:var(--surface2);border:.5px solid var(--border2);border-radius:6px;padding:10px 18px;font-family:\'DM Mono\',monospace;font-size:15px;color:var(--text);">サイズ: '+fd.s+' pot</div>':'')+
+    '</div>'+
+    '<div style="background:var(--surface2);border-left:3px solid '+ao+';padding:14px 16px;border-radius:0 6px 6px 0;">'+
+      '<div style="font-family:\'DM Mono\',monospace;font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;">根拠（GTO Wizard準拠）</div>'+
+      '<div style="font-size:13px;color:var(--text);line-height:1.9;">'+fd.r+'</div>'+
+    '</div>';
+  fwUpdSum();
 }
-// Legacy alias (keep old setFlopHand working if referenced)
-function setFlopHand(v){setFlopHandTex(v);}
-
+function fwInit(){
+  fwBuildHoleRank();fwBuildFlopRank();fwBuildMyPos();fwBuildOppPos();
+}
 
 buildMyPos();buildRankBtns(1);buildRankBtns(2);
-buildFlopRankBtns();
+fwInit();
+cs.myPos='UTG';buildChartMyPos();renderGrid();
 cs.myPos='UTG';buildChartMyPos();renderGrid();
 
 </script>
