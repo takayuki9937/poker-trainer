@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>フロップ コンボ計算機</title>
+<style>
+  :root {
+    --bg:#0d0d0f; --surface:#16161a; --surface2:#1e1e24;
+    --border:rgba(255,255,255,.08); --border2:rgba(255,255,255,.15);
+    --text:#f0efe8; --muted:#7a7a8a;
+    --red:#e03030; --green:#1d9e75; --amber:#d4861a; --blue:#2a7be4;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace,sans-serif;min-height:100vh;}
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@800&display=swap');
+
+  header{padding:24px 36px 18px;border-bottom:.5px solid var(--border);display:flex;align-items:baseline;gap:14px;}
+  header h1{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;letter-spacing:-.5px;}
+  header span{font-size:11px;color:var(--muted);letter-spacing:.08em;}
+  .wrap{padding:32px 36px;max-width:860px;}
+
+  /* ── カード入力 ── */
+  .cards-row{display:flex;gap:24px;flex-wrap:wrap;margin-bottom:28px;}
+  .card-slot{background:var(--surface);border:.5px solid var(--border);border-radius:10px;padding:16px;flex:1;min-width:200px;}
+  .slot-label{font-size:10px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;}
+  .rank-row{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;}
+  .rb{font-size:11px;font-weight:500;width:30px;height:30px;display:flex;align-items:center;justify-content:center;
+      background:var(--surface2);border:.5px solid var(--border);border-radius:4px;color:var(--muted);cursor:pointer;transition:all .1s;}
+  .rb:hover{color:var(--text);border-color:var(--border2);}
+  .rb.active{background:var(--surface2);border-color:var(--border2);color:var(--text);}
+  .rb:disabled{opacity:.25;cursor:not-allowed;}
+  .suit-row{display:flex;gap:4px;margin-bottom:10px;}
+  .sb{font-size:16px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;
+      background:var(--surface2);border:.5px solid var(--border);border-radius:4px;cursor:pointer;transition:all .1s;opacity:.4;}
+  .sb:hover{opacity:.75;border-color:var(--border2);}
+  .sb.active{opacity:1;border-color:var(--border2);}
+  .sb.red{color:#e03030;}
+  .sb:disabled{cursor:not-allowed;}
+  .card-disp{display:flex;align-items:center;gap:6px;}
+  .cd{display:inline-flex;align-items:center;justify-content:center;width:46px;height:62px;
+      background:#fff;border-radius:6px;font-size:17px;font-weight:700;color:#111;
+      flex-direction:column;line-height:1;}
+  .cd .sc{font-size:11px;}
+  .cd.rc{color:#c8230a;}
+  .cd.empty{background:var(--surface);color:var(--muted);font-size:13px;border:.5px dashed var(--border2);}
+
+  /* ── リセットボタン ── */
+  .reset-btn{font-size:11px;padding:7px 16px;background:none;border:.5px solid var(--border2);
+             border-radius:4px;color:var(--muted);cursor:pointer;transition:color .1s;margin-bottom:24px;}
+  .reset-btn:hover{color:var(--text);}
+
+  /* ── 結果テーブル ── */
+  #result{display:none;}
+  .result-title{font-size:10px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:14px;}
+  table{width:100%;border-collapse:collapse;}
+  td,th{padding:9px 10px;text-align:left;font-size:12px;}
+  th{color:var(--muted);font-size:10px;letter-spacing:.08em;text-transform:uppercase;border-bottom:.5px solid var(--border);}
+  tr.hand-row td{border-bottom:.5px solid var(--border);}
+  tr.hand-row:last-child td{border-bottom:none;}
+  .num{text-align:right;font-size:13px;font-weight:500;font-variant-numeric:tabular-nums;}
+  .pct{text-align:right;color:var(--muted);width:56px;}
+  .bar-cell{width:180px;}
+  .bar-wrap{background:var(--surface2);border-radius:2px;height:6px;overflow:hidden;}
+  .bar-fill{height:100%;border-radius:2px;transition:width .3s;}
+  /* hand categories color */
+  .sf   .bar-fill{background:var(--amber);}
+  .quads .bar-fill{background:var(--amber);}
+  .fh   .bar-fill{background:var(--red);}
+  .flush .bar-fill{background:var(--blue);}
+  .str  .bar-fill{background:var(--green);}
+  .trips .bar-fill{background:var(--red);}
+  .twopair .bar-fill{background:var(--blue);}
+  .pair .bar-fill{background:var(--muted);}
+  .high .bar-fill{background:var(--border2);}
+
+  /* divider row */
+  tr.divider td{padding:0;height:1px;background:var(--border2);}
+  tr.total-row td{background:var(--surface2);font-weight:500;}
+  tr.twoplus-row td{background:rgba(42,123,228,.08);border-top:.5px solid rgba(42,123,228,.3);border-bottom:.5px solid rgba(42,123,228,.3);}
+  tr.twoplus-row .name{color:var(--blue);}
+
+  .hand-name{min-width:140px;}
+  @media(max-width:600px){.wrap{padding:16px;}.cards-row{flex-direction:column;}.bar-cell{display:none;}}
+</style>
+</head>
+<body>
+<header>
+  <h1>フロップ コンボ計算機</h1>
+  <span>ホールカード × フロップ 5枚手役分布</span>
+</header>
+
+<div class="wrap">
+  <div class="cards-row" id="cards-row"></div>
+  <button class="reset-btn" onclick="resetAll()">&#x21BA; リセット</button>
+
+  <div id="result">
+    <div class="result-title">コンボ分布（残り49枚からのホールカード組み合わせ: 1,176通り）</div>
+    <table>
+      <thead>
+        <tr>
+          <th class="hand-name">ハンド</th>
+          <th style="text-align:right">コンボ</th>
+          <th style="text-align:right">%</th>
+          <th class="bar-cell"></th>
+        </tr>
+      </thead>
+      <tbody id="result-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+// ── 定数 ──────────────────────────────────────────────────────
+const RANKS = ['A','K','Q','J','T','9','8','7','6','5','4','3','2'];
+const SUITS = ['s','h','d','c'];
+const SC    = {s:'♠',h:'♥',d:'♦',c:'♣'};
+const RED   = new Set(['h','d']);
+const RV    = {A:14,K:13,Q:12,J:11,T:10,9:9,8:8,7:7,6:6,5:5,4:4,3:3,2:2};
+
+const FULL_DECK = [];
+for (const r of RANKS) for (const s of SUITS) FULL_DECK.push({r, s, v: RV[r]});
+
+// ── 状態 ──────────────────────────────────────────────────────
+// flop[i] = {r: string|null, s: string|null}
+const flop = [{r:null,s:null},{r:null,s:null},{r:null,s:null}];
+
+// ── UI 構築 ──────────────────────────────────────────────────
+function buildUI() {
+  const container = document.getElementById('cards-row');
+  container.innerHTML = '';
+  for (let i = 0; i < 3; i++) {
+    const slot = document.createElement('div');
+    slot.className = 'card-slot';
+    slot.innerHTML = `
+      <div class="slot-label">${i+1}枚目</div>
+      <div class="rank-row" id="rr${i}"></div>
+      <div class="suit-row" id="sr${i}"></div>
+      <div class="card-disp"><div class="cd empty" id="cd${i}">?</div></div>
+    `;
+    container.appendChild(slot);
+
+    // Rank buttons
+    const rr = slot.querySelector(`#rr${i}`);
+    for (const r of RANKS) {
+      const b = document.createElement('button');
+      b.className = 'rb';
+      b.id = `rb${i}${r}`;
+      b.textContent = r;
+      b.onclick = () => selectRank(i, r);
+      rr.appendChild(b);
+    }
+
+    // Suit buttons
+    const sr = slot.querySelector(`#sr${i}`);
+    for (const s of SUITS) {
+      const b = document.createElement('button');
+      b.className = 'sb' + (RED.has(s) ? ' red' : '');
+      b.id = `sb${i}${s}`;
+      b.textContent = SC[s];
+      b.onclick = () => selectSuit(i, s);
+      sr.appendChild(b);
+    }
+  }
+}
+
+// ── カード選択 ──────────────────────────────────────────────
+function usedSet(excludeIdx = -1) {
+  const s = new Set();
+  flop.forEach((c, i) => { if (i !== excludeIdx && c.r && c.s) s.add(c.r + c.s); });
+  return s;
+}
+
+function selectRank(i, r) {
+  flop[i].r = r;
+  flop[i].s = null; // スーツをリセット（ランク変更時）
+  refreshSlot(i);
+  tryCalculate();
+}
+
+function selectSuit(i, s) {
+  const r = flop[i].r;
+  if (!r) return;
+  const key = r + s;
+  if (usedSet(i).has(key)) return; // 重複カードは選択不可
+  flop[i].s = s;
+  refreshSlot(i);
+  tryCalculate();
+}
+
+function refreshSlot(i) {
+  const {r, s} = flop[i];
+  const used = usedSet(i);
+
+  // ランクボタン更新
+  for (const rk of RANKS) {
+    const b = document.getElementById(`rb${i}${rk}`);
+    b.classList.toggle('active', rk === r);
+  }
+
+  // スーツボタン更新（選択済みカードは無効化）
+  for (const su of SUITS) {
+    const b = document.getElementById(`sb${i}${su}`);
+    const wouldDup = r && used.has(r + su);
+    b.classList.toggle('active', su === s);
+    b.style.opacity = wouldDup ? '0.15' : '';
+    b.style.cursor  = wouldDup ? 'not-allowed' : '';
+  }
+
+  // カード表示更新
+  const cd = document.getElementById(`cd${i}`);
+  if (!r) {
+    cd.className = 'cd empty'; cd.innerHTML = '?';
+  } else {
+    const isRed = s && RED.has(s);
+    cd.className = 'cd' + (isRed ? ' rc' : '');
+    cd.innerHTML = `<span>${r}</span><span class="sc">${s ? SC[s] : ''}</span>`;
+  }
+
+  // 他スロットのスーツ無効化も更新
+  for (let j = 0; j < 3; j++) { if (j !== i) refreshSuitDisable(j); }
+}
+
+function refreshSuitDisable(i) {
+  const {r} = flop[i];
+  const used = usedSet(i);
+  for (const su of SUITS) {
+    const b = document.getElementById(`sb${i}${su}`);
+    const wouldDup = r && used.has(r + su);
+    b.style.opacity = wouldDup ? '0.15' : '';
+    b.style.cursor  = wouldDup ? 'not-allowed' : '';
+  }
+}
+
+function resetAll() {
+  for (let i = 0; i < 3; i++) { flop[i].r = null; flop[i].s = null; }
+  buildUI();
+  document.getElementById('result').style.display = 'none';
+}
+
+// ── 5枚手役評価 ──────────────────────────────────────────────
+function eval5(cards) {
+  const vals  = cards.map(c => c.v).sort((a,b) => b-a);
+  const suits = cards.map(c => c.s);
+
+  const isFlush = suits.every(s => s === suits[0]);
+
+  // 連続チェック（A-5ストレート含む）
+  const uniq = [...new Set(vals)];
+  let isStraight = false;
+  if (uniq.length === 5) {
+    if (vals[0] - vals[4] === 4) isStraight = true;
+    if (vals[0]===14 && vals[1]===5 && vals[2]===4 && vals[3]===3 && vals[4]===2) isStraight = true;
+  }
+
+  // 枚数カウント
+  const freq = {};
+  vals.forEach(v => { freq[v] = (freq[v]||0)+1; });
+  const cnts = Object.values(freq).sort((a,b) => b-a);
+
+  if (isFlush && isStraight) return 'sf';
+  if (cnts[0] === 4)                  return 'quads';
+  if (cnts[0] === 3 && cnts[1] === 2) return 'fh';
+  if (isFlush)                        return 'flush';
+  if (isStraight)                     return 'str';
+  if (cnts[0] === 3)                  return 'trips';
+  if (cnts[0] === 2 && cnts[1] === 2) return 'twopair';
+  if (cnts[0] === 2)                  return 'pair';
+  return 'high';
+}
+
+// ── コンボ計算 ──────────────────────────────────────────────
+function calculate() {
+  const flopCards = flop.map(c => ({r: c.r, s: c.s, v: RV[c.r]}));
+  const usedKeys  = new Set(flopCards.map(c => c.r + c.s));
+  const remaining = FULL_DECK.filter(c => !usedKeys.has(c.r + c.s));
+
+  const counts = {sf:0, quads:0, fh:0, flush:0, str:0, trips:0, twopair:0, pair:0, high:0};
+
+  for (let i = 0; i < remaining.length; i++) {
+    for (let j = i+1; j < remaining.length; j++) {
+      const cat = eval5([remaining[i], remaining[j], ...flopCards]);
+      counts[cat]++;
+    }
+  }
+  return counts;
+}
+
+// ── 結果描画 ──────────────────────────────────────────────────
+const HAND_ROWS = [
+  {key:'sf',       label:'ストレートフラッシュ', group:'good'},
+  {key:'quads',    label:'フォーカード',         group:'good'},
+  {key:'fh',       label:'フルハウス',           group:'good'},
+  {key:'flush',    label:'フラッシュ',           group:'good'},
+  {key:'str',      label:'ストレート',           group:'good'},
+  {key:'trips',    label:'スリーカード',         group:'good'},
+  {key:'twopair',  label:'ツーペア',             group:'good'},
+  {key:'pair',     label:'ワンペア',             group:'weak'},
+  {key:'high',     label:'ノーペア',             group:'weak'},
+];
+const TOTAL = 1176;
+
+function renderResult(counts) {
+  const el = document.getElementById('result');
+  el.style.display = '';
+  const tbody = document.getElementById('result-body');
+
+  const twoPlusTotal = ['sf','quads','fh','flush','str','trips','twopair']
+    .reduce((acc, k) => acc + counts[k], 0);
+
+  // Max combo count for bar scaling
+  const maxVal = Math.max(...Object.values(counts), 1);
+
+  let html = '';
+
+  let prevGroup = null;
+  for (let idx = 0; idx < HAND_ROWS.length; idx++) {
+    const {key, label, group} = HAND_ROWS[idx];
+    const n   = counts[key];
+    const pct = (n / TOTAL * 100).toFixed(1);
+    const barW = (n / maxVal * 100).toFixed(1);
+    const muted = group === 'weak' ? 'style="color:var(--muted)"' : '';
+
+    // Insert two-pair+ summary before pair row
+    if (prevGroup === 'good' && group === 'weak') {
+      html += `
+        <tr class="twoplus-row">
+          <td class="name hand-name">▶ ツーペア以上 合計</td>
+          <td class="num">${twoPlusTotal.toLocaleString()}</td>
+          <td class="pct">${(twoPlusTotal/TOTAL*100).toFixed(1)}%</td>
+          <td class="bar-cell">
+            <div class="bar-wrap">
+              <div class="bar-fill" style="width:${(twoPlusTotal/TOTAL*100).toFixed(1)}%;background:var(--blue);"></div>
+            </div>
+          </td>
+        </tr>
+        <tr class="divider"><td colspan="4"></td></tr>
+      `;
+    }
+
+    html += `
+      <tr class="hand-row ${key}">
+        <td class="hand-name" ${muted}>${label}</td>
+        <td class="num" ${muted}>${n.toLocaleString()}</td>
+        <td class="pct" ${muted}>${pct}%</td>
+        <td class="bar-cell">
+          <div class="bar-wrap">
+            <div class="bar-fill" style="width:${barW}%"></div>
+          </div>
+        </td>
+      </tr>
+    `;
+    prevGroup = group;
+  }
+
+  // Total row
+  html += `
+    <tr class="divider"><td colspan="4"></td></tr>
+    <tr class="total-row">
+      <td class="hand-name">合計</td>
+      <td class="num">${TOTAL.toLocaleString()}</td>
+      <td class="pct">100%</td>
+      <td class="bar-cell"></td>
+    </tr>
+  `;
+
+  tbody.innerHTML = html;
+}
+
+// ── 自動計算トリガー ─────────────────────────────────────────
+function tryCalculate() {
+  if (flop.every(c => c.r && c.s)) {
+    const counts = calculate();
+    renderResult(counts);
+  }
+}
+
+// ── 初期化 ───────────────────────────────────────────────────
+buildUI();
+</script>
+</body>
+</html>
