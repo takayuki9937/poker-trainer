@@ -151,6 +151,11 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .str   .bar-fg{background:var(--green);}
 .trips .bar-fg{background:var(--red);}
 .twopair .bar-fg{background:var(--blue);}
+.pair  .bar-fg{background:var(--muted);}
+.high  .bar-fg{background:rgba(255,255,255,.2);}
+.total-row td{background:var(--surface2);font-weight:600;}
+.total-row td:first-child{color:var(--text);}
+.weak-row td:first-child{color:var(--muted);}
 </style>
 </head>
 <body>
@@ -305,6 +310,14 @@ function renderSection(id, arr, max, street) {
 // ── カードクリック ───────────────────────────────────────────────
 function cardClick(r, s) {
   const key = r + s;
+
+  // 現在ストリートの選択済みカードならトグル解除
+  const curIdx = streets[currentStreet].findIndex(c => c.r === r && c.s === s);
+  if (curIdx !== -1) {
+    removeCard(currentStreet, curIdx);
+    return;
+  }
+
   if (usedSet().has(key)) return;
 
   const max = currentStreet === 'flop' ? 3 : 1;
@@ -468,20 +481,33 @@ function renderResult(counts, boardCount) {
   document.getElementById('tp-num').textContent = tpTotal.toLocaleString();
   document.getElementById('tp-pct').textContent = `${tpPct}%`;
 
-  const maxVal = Math.max(...HAND_DEF.map(d => counts[d.key]), 1);
+  const allRows = [
+    ...HAND_DEF,
+    {key:'pair', label:'ワンペア', weak:true},
+    {key:'high', label:'ハイカード', weak:true},
+  ];
+  const maxVal = Math.max(...allRows.map(d => counts[d.key]), 1);
   let html = '';
-  for (const {key, label} of HAND_DEF) {
+  for (const {key, label, weak} of allRows) {
     const n   = counts[key];
     const pct = (n/total*100).toFixed(1);
     const bar = (n/maxVal*100).toFixed(1);
+    const cls = key + (weak ? ' weak-row' : '');
     html += `
-      <tr class="${key}">
+      <tr class="${cls}">
         <td>${label}</td>
         <td class="n">${n.toLocaleString()}</td>
         <td class="p">${pct}%</td>
         <td class="bar-td"><div class="bar-bg"><div class="bar-fg" style="width:${bar}%"></div></div></td>
       </tr>`;
   }
+  html += `
+    <tr class="total-row">
+      <td>合計</td>
+      <td class="n">${total.toLocaleString()}</td>
+      <td class="p">100%</td>
+      <td class="bar-td"></td>
+    </tr>`;
   document.getElementById('hand-tbody').innerHTML = html;
 }
 
