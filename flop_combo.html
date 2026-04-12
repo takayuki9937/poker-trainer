@@ -2,406 +2,493 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>ボード コンボ計算機</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500;600&family=Syne:wght@800&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg:#0d0d0f; --surface:#16161a; --surface2:#1e1e24;
-    --border:rgba(255,255,255,.08); --border2:rgba(255,255,255,.15);
-    --text:#f0efe8; --muted:#7a7a8a;
-    --red:#e03030; --green:#1d9e75; --amber:#d4861a; --blue:#2a7be4;
-  }
-  *{box-sizing:border-box;margin:0;padding:0;}
-  body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace,sans-serif;min-height:100vh;}
+:root {
+  --bg:#0d0d0f; --surface:#16161a; --surface2:#1e1e24;
+  --border:rgba(255,255,255,.08); --border2:rgba(255,255,255,.15);
+  --text:#f0efe8; --muted:#7a7a8a;
+  --red:#e03030; --green:#1d9e75; --amber:#d4861a; --blue:#2a7be4;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'DM Mono',monospace,sans-serif;}
 
-  header{padding:24px 36px 18px;border-bottom:.5px solid var(--border);display:flex;align-items:baseline;gap:14px;}
-  header h1{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;letter-spacing:-.5px;}
-  header span{font-size:11px;color:var(--muted);letter-spacing:.08em;}
-  .wrap{padding:32px 36px;max-width:980px;}
+#app{
+  display:flex;flex-direction:column;
+  height:100vh;height:100dvh;
+  padding:8px;gap:6px;
+}
 
-  /* ── カードスロット ── */
-  .board-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:24px;}
-  .board-group{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start;}
-  .group-label{font-size:9px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;
-               margin-bottom:8px;padding-bottom:6px;border-bottom:.5px solid var(--border);}
+/* ── ボード表示 ── */
+#board-display{
+  display:flex;align-items:center;gap:4px;
+  background:var(--surface);border-radius:8px;
+  padding:6px 8px;flex-shrink:0;
+}
+.bd-section{display:flex;gap:4px;align-items:center;flex-shrink:0;}
+.bd-section-wrap{display:flex;flex-direction:column;align-items:center;gap:3px;}
+.bd-label{font-size:7px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;}
+.bd-divider{width:1px;align-self:stretch;background:var(--border2);margin:0 2px;flex-shrink:0;}
 
-  .card-slot{background:var(--surface);border:.5px solid var(--border);border-radius:8px;padding:14px;width:160px;transition:opacity .2s;}
-  .card-slot.disabled{opacity:.35;pointer-events:none;}
-  .slot-label{font-size:9px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;}
+.card-mini{
+  width:34px;height:46px;
+  background:#fff;border-radius:4px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;color:#111;
+  cursor:pointer;flex-shrink:0;line-height:1.1;
+  border:none;
+}
+.card-mini.red{color:#c8230a;}
+.card-mini .mini-suit{font-size:9px;}
+.card-mini.empty{
+  background:var(--surface2);border:1.5px dashed rgba(255,255,255,.18);
+  color:rgba(255,255,255,.2);font-size:18px;cursor:default;
+}
+.card-mini.clickable:active{opacity:.7;}
 
-  .rank-row{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:7px;}
-  .rb{font-size:10px;font-weight:500;width:26px;height:26px;display:flex;align-items:center;justify-content:center;
-      background:var(--surface2);border:.5px solid var(--border);border-radius:3px;color:var(--muted);cursor:pointer;transition:all .1s;}
-  .rb:hover{color:var(--text);border-color:var(--border2);}
-  .rb.active{border-color:var(--border2);color:var(--text);}
+/* ── ストリートタブ ── */
+#street-tabs{display:flex;gap:5px;flex-shrink:0;}
+.tab{
+  flex:1;padding:8px 4px;
+  background:var(--surface);border:1px solid var(--border);border-radius:6px;
+  color:var(--muted);font-size:12px;font-family:inherit;
+  cursor:pointer;transition:all .15s;
+}
+.tab.active{background:var(--surface2);border-color:var(--border2);color:var(--text);}
+.tab:disabled{opacity:.3;cursor:not-allowed;}
+.tab.street-full{border-color:rgba(29,158,117,.4);color:var(--green);}
+.tab.street-full.active{border-color:var(--green);}
 
-  .suit-row{display:flex;gap:3px;margin-bottom:9px;}
-  .sb{font-size:15px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;
-      background:var(--surface2);border:.5px solid var(--border);border-radius:3px;cursor:pointer;transition:all .1s;opacity:.4;}
-  .sb:hover{opacity:.75;border-color:var(--border2);}
-  .sb.active{opacity:1;border-color:var(--border2);}
-  .sb.red{color:#e03030;}
+/* ── カードグリッド ── */
+#card-grid{display:flex;flex-direction:column;gap:3px;flex-shrink:0;}
+.suit-row{display:flex;align-items:center;gap:3px;}
+.suit-label{
+  font-size:17px;width:24px;text-align:center;flex-shrink:0;line-height:1;
+}
+.suit-cards{display:grid;grid-template-columns:repeat(13,1fr);gap:2px;flex:1;}
 
-  .cd{display:inline-flex;align-items:center;justify-content:center;width:44px;height:59px;
-      background:#fff;border-radius:5px;font-size:16px;font-weight:700;color:#111;
-      flex-direction:column;line-height:1;}
-  .cd .sc{font-size:10px;}
-  .cd.rc{color:#c8230a;}
-  .cd.empty{background:var(--surface);color:var(--muted);font-size:12px;border:.5px dashed var(--border2);}
+.card-btn{
+  height:30px;border:none;border-radius:4px;
+  font-size:11px;font-weight:600;font-family:inherit;
+  cursor:pointer;transition:opacity .1s;
+  display:flex;align-items:center;justify-content:center;
+  padding:0;
+}
+/* Suit backgrounds */
+.suit-s .card-btn{background:#2a2a40;color:#d0cfe8;}
+.suit-h .card-btn{background:#5a1212;color:#ffd8d8;}
+.suit-d .card-btn{background:#0e2d70;color:#c8d8ff;}
+.suit-c .card-btn{background:#0d4525;color:#c0f0d0;}
 
-  .reset-btn{font-size:11px;padding:7px 16px;background:none;border:.5px solid var(--border2);
-             border-radius:4px;color:var(--muted);cursor:pointer;transition:color .1s;margin-bottom:28px;}
-  .reset-btn:hover{color:var(--text);}
+.card-btn.used{opacity:.15;cursor:not-allowed;pointer-events:none;}
+.card-btn.on-board{
+  outline:2px solid rgba(255,255,255,.5);outline-offset:-2px;
+  opacity:.5;cursor:not-allowed;pointer-events:none;
+}
+.card-btn.on-current{
+  outline:2px solid #fff;outline-offset:-2px;
+  opacity:1;cursor:pointer;pointer-events:auto;
+}
 
-  /* ── 結果 ── */
-  #result{display:none;}
-  .result-title{font-size:10px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:14px;}
-  table{width:100%;border-collapse:collapse;max-width:580px;}
-  td,th{padding:8px 10px;text-align:left;font-size:12px;}
-  th{color:var(--muted);font-size:10px;letter-spacing:.08em;text-transform:uppercase;border-bottom:.5px solid var(--border);}
-  tr.hand-row td{border-bottom:.5px solid var(--border);}
-  .num{text-align:right;font-size:13px;font-weight:500;font-variant-numeric:tabular-nums;}
-  .pct{text-align:right;color:var(--muted);width:56px;}
-  .bar-cell{width:160px;}
-  .bar-wrap{background:var(--surface2);border-radius:2px;height:5px;overflow:hidden;}
-  .bar-fill{height:100%;border-radius:2px;transition:width .3s;}
-  .sf    .bar-fill{background:var(--amber);}
-  .quads .bar-fill{background:var(--amber);}
-  .fh    .bar-fill{background:var(--red);}
-  .flush .bar-fill{background:var(--blue);}
-  .str   .bar-fill{background:var(--green);}
-  .trips .bar-fill{background:var(--red);}
-  .twopair .bar-fill{background:var(--blue);}
-  .pair  .bar-fill{background:var(--muted);}
-  .high  .bar-fill{background:var(--border2);}
-  tr.divider td{padding:0;height:1px;background:var(--border2);}
-  tr.total-row td{background:var(--surface2);font-weight:500;}
-  tr.twoplus-row td{background:rgba(42,123,228,.08);border-top:.5px solid rgba(42,123,228,.3);border-bottom:.5px solid rgba(42,123,228,.3);}
-  tr.twoplus-row .tname{color:var(--blue);}
-  .hand-name{min-width:150px;}
-  @media(max-width:640px){.wrap{padding:16px;}.card-slot{width:140px;}.bar-cell{display:none;}}
+/* ── リセットボタン ── */
+#reset-btn{
+  padding:7px;background:none;
+  border:1px solid var(--border2);border-radius:6px;
+  color:var(--muted);font-size:11px;font-family:inherit;
+  cursor:pointer;flex-shrink:0;letter-spacing:.04em;
+}
+#reset-btn:active{color:var(--text);}
+
+/* ── 結果パネル ── */
+#result-panel{
+  flex:1;background:var(--surface);border-radius:8px;
+  overflow-y:auto;padding:10px;min-height:0;
+}
+#result-empty{
+  color:var(--muted);font-size:11px;text-align:center;
+  padding:20px 0;line-height:1.8;
+}
+#result-content{display:none;}
+
+.res-header{
+  font-size:9px;color:var(--muted);letter-spacing:.1em;
+  text-transform:uppercase;margin-bottom:8px;
+}
+.tp-box{
+  background:rgba(42,123,228,.1);border:1px solid rgba(42,123,228,.3);
+  border-radius:6px;padding:7px 10px;margin-bottom:8px;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.tp-label{font-size:10px;color:var(--blue);}
+.tp-right{display:flex;align-items:baseline;gap:6px;}
+.tp-num{font-size:18px;font-weight:600;font-variant-numeric:tabular-nums;}
+.tp-pct{font-size:11px;color:var(--muted);}
+
+.hand-table{width:100%;border-collapse:collapse;}
+.hand-table th{
+  font-size:8px;color:var(--muted);letter-spacing:.08em;
+  text-transform:uppercase;padding:0 6px 4px;
+  border-bottom:1px solid var(--border);text-align:right;
+}
+.hand-table th:first-child{text-align:left;}
+.hand-table td{
+  padding:4px 6px;font-size:11px;text-align:right;
+  font-variant-numeric:tabular-nums;border-bottom:.5px solid var(--border);
+}
+.hand-table td:first-child{text-align:left;color:var(--muted);font-size:10px;}
+.hand-table td.n{font-weight:600;font-size:12px;color:var(--text);}
+.hand-table td.p{color:var(--muted);font-size:10px;}
+.bar-td{width:60px;}
+.bar-bg{background:var(--surface2);border-radius:2px;height:4px;overflow:hidden;}
+.bar-fg{height:100%;border-radius:2px;}
+
+.sf    .bar-fg{background:var(--amber);}
+.quads .bar-fg{background:var(--amber);}
+.fh    .bar-fg{background:var(--red);}
+.flush .bar-fg{background:var(--blue);}
+.str   .bar-fg{background:var(--green);}
+.trips .bar-fg{background:var(--red);}
+.twopair .bar-fg{background:var(--blue);}
 </style>
 </head>
 <body>
-<header>
-  <h1>ボード コンボ計算機</h1>
-  <span>フロップ / ターン / リバー対応</span>
-</header>
+<div id="app">
 
-<div class="wrap">
-  <div class="board-row" id="board-row"></div>
-  <button class="reset-btn" onclick="resetAll()">&#x21BA; リセット</button>
-
-  <div id="result">
-    <div class="result-title" id="result-title"></div>
-    <table>
-      <thead>
-        <tr>
-          <th class="hand-name">ハンド</th>
-          <th style="text-align:right">コンボ</th>
-          <th style="text-align:right">%</th>
-          <th class="bar-cell"></th>
-        </tr>
-      </thead>
-      <tbody id="result-body"></tbody>
-    </table>
+  <!-- ① ボード表示 -->
+  <div id="board-display">
+    <div class="bd-section-wrap">
+      <div class="bd-label">Flop</div>
+      <div class="bd-section" id="flop-display"></div>
+    </div>
+    <div class="bd-divider"></div>
+    <div class="bd-section-wrap">
+      <div class="bd-label">Turn</div>
+      <div class="bd-section" id="turn-display"></div>
+    </div>
+    <div class="bd-divider"></div>
+    <div class="bd-section-wrap">
+      <div class="bd-label">River</div>
+      <div class="bd-section" id="river-display"></div>
+    </div>
   </div>
-</div>
 
+  <!-- ② ストリートタブ -->
+  <div id="street-tabs">
+    <button class="tab active" id="tab-flop"  onclick="switchStreet('flop')">フロップ</button>
+    <button class="tab"        id="tab-turn"  onclick="switchStreet('turn')"  disabled>ターン</button>
+    <button class="tab"        id="tab-river" onclick="switchStreet('river')" disabled>リバー</button>
+  </div>
+
+  <!-- ③ カードグリッド -->
+  <div id="card-grid"></div>
+
+  <!-- ④ リセット -->
+  <button id="reset-btn" onclick="resetAll()">&#x21BA; 全てリセット</button>
+
+  <!-- ⑤ 結果パネル -->
+  <div id="result-panel">
+    <div id="result-empty">フロップ3枚を選択すると<br>コンボ数をリアルタイム計算します</div>
+    <div id="result-content">
+      <div class="res-header" id="res-header"></div>
+      <div class="tp-box">
+        <span class="tp-label">▶ ツーペア以上 合計</span>
+        <div class="tp-right">
+          <span class="tp-num" id="tp-num">—</span>
+          <span class="tp-pct" id="tp-pct"></span>
+        </div>
+      </div>
+      <table class="hand-table">
+        <thead>
+          <tr>
+            <th>ハンド</th>
+            <th>コンボ</th>
+            <th>%</th>
+            <th class="bar-td"></th>
+          </tr>
+        </thead>
+        <tbody id="hand-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
 <script>
-// ── 定数 ──────────────────────────────────────────────────────
+// ── 定数 ────────────────────────────────────────────────────────
 const RANKS = ['A','K','Q','J','T','9','8','7','6','5','4','3','2'];
 const SUITS = ['s','h','d','c'];
 const SC    = {s:'♠', h:'♥', d:'♦', c:'♣'};
 const RED   = new Set(['h','d']);
 const RV    = {A:14,K:13,Q:12,J:11,T:10,9:9,8:8,7:7,6:6,5:5,4:4,3:3,2:2};
+const SUIT_ROW_CLASS = {s:'suit-s', h:'suit-h', d:'suit-d', c:'suit-c'};
 
 const FULL_DECK = [];
 for (const r of RANKS) for (const s of SUITS) FULL_DECK.push({r, s, v: RV[r]});
 
-// スロット定義
-const SLOT_INFO = [
-  {label:'フロップ 1', group:'flop'},
-  {label:'フロップ 2', group:'flop'},
-  {label:'フロップ 3', group:'flop'},
-  {label:'ターン',     group:'turn'},
-  {label:'リバー',     group:'river'},
+const HAND_DEF = [
+  {key:'sf',      label:'ストレートフラッシュ'},
+  {key:'quads',   label:'フォーカード'},
+  {key:'fh',      label:'フルハウス'},
+  {key:'flush',   label:'フラッシュ'},
+  {key:'str',     label:'ストレート'},
+  {key:'trips',   label:'セット'},
+  {key:'twopair', label:'ツーペア'},
 ];
 
-// ── 状態 ──────────────────────────────────────────────────────
-const board = Array.from({length: 5}, () => ({r: null, s: null}));
+// ── 状態 ────────────────────────────────────────────────────────
+const streets = {flop:[], turn:[], river:[]};
+let currentStreet = 'flop';
 
-// ── ヘルパー ─────────────────────────────────────────────────
-function completedCount() {
-  let n = 0;
-  for (let i = 0; i < 5; i++) {
-    if (board[i].r && board[i].s) n++;
-    else break;
-  }
-  return n;
+function getAllCards() {
+  return [...streets.flop, ...streets.turn, ...streets.river];
+}
+function usedSet() {
+  return new Set(getAllCards().map(c => c.r + c.s));
 }
 
-function usedSet(excludeIdx = -1) {
-  const s = new Set();
-  board.forEach((c, i) => { if (i !== excludeIdx && c.r && c.s) s.add(c.r + c.s); });
-  return s;
-}
+// ── グリッド構築 ─────────────────────────────────────────────────
+function buildGrid() {
+  const grid = document.getElementById('card-grid');
+  grid.innerHTML = '';
+  for (const s of SUITS) {
+    const row = document.createElement('div');
+    row.className = `suit-row ${SUIT_ROW_CLASS[s]}`;
 
-// ── UI 構築 ──────────────────────────────────────────────────
-function buildUI() {
-  const container = document.getElementById('board-row');
-  container.innerHTML = '';
+    const lbl = document.createElement('span');
+    lbl.className = 'suit-label';
+    lbl.textContent = SC[s];
+    row.appendChild(lbl);
 
-  for (let i = 0; i < 5; i++) {
-    const info  = SLOT_INFO[i];
-    const slot  = document.createElement('div');
-    slot.className = 'card-slot';
-    slot.id = `slot${i}`;
-    slot.innerHTML = `
-      <div class="slot-label">${info.label}</div>
-      <div class="rank-row" id="rr${i}"></div>
-      <div class="suit-row" id="sr${i}"></div>
-      <div><div class="cd empty" id="cd${i}">?</div></div>
-    `;
-    container.appendChild(slot);
-
-    const rr = slot.querySelector(`#rr${i}`);
+    const cards = document.createElement('div');
+    cards.className = 'suit-cards';
     for (const r of RANKS) {
-      const b = document.createElement('button');
-      b.className = 'rb'; b.id = `rb${i}${r}`; b.textContent = r;
-      b.onclick = () => selectRank(i, r);
-      rr.appendChild(b);
+      const btn = document.createElement('button');
+      btn.className = 'card-btn';
+      btn.id = `cb-${r}${s}`;
+      btn.textContent = r;
+      btn.onclick = () => cardClick(r, s);
+      cards.appendChild(btn);
     }
-
-    const sr = slot.querySelector(`#sr${i}`);
-    for (const s of SUITS) {
-      const b = document.createElement('button');
-      b.className = 'sb' + (RED.has(s) ? ' red' : '');
-      b.id = `sb${i}${s}`; b.textContent = SC[s];
-      b.onclick = () => selectSuit(i, s);
-      sr.appendChild(b);
-    }
-  }
-  updateSlotEnabled();
-}
-
-function updateSlotEnabled() {
-  // ターン(3)はフロップ3枚完了後、リバー(4)はターン完了後に有効
-  for (let i = 3; i < 5; i++) {
-    const prevComplete = board[i-1].r && board[i-1].s;
-    const slot = document.getElementById(`slot${i}`);
-    if (slot) slot.classList.toggle('disabled', !prevComplete);
+    row.appendChild(cards);
+    grid.appendChild(row);
   }
 }
 
-// ── カード選択 ──────────────────────────────────────────────
-function selectRank(i, r) {
-  board[i].r = r;
-  board[i].s = null;
-  refreshSlot(i);
-  updateSlotEnabled();
+// ── ボード表示構築 ───────────────────────────────────────────────
+function renderBoardDisplay() {
+  renderSection('flop-display',  streets.flop,  3, 'flop');
+  renderSection('turn-display',  streets.turn,  1, 'turn');
+  renderSection('river-display', streets.river, 1, 'river');
+}
+
+function renderSection(id, arr, max, street) {
+  const container = document.getElementById(id);
+  container.innerHTML = '';
+  for (let i = 0; i < max; i++) {
+    const card = arr[i];
+    const div  = document.createElement('div');
+    if (card) {
+      div.className = 'card-mini clickable' + (RED.has(card.s) ? ' red' : '');
+      div.innerHTML = `<span>${card.r}</span><span class="mini-suit">${SC[card.s]}</span>`;
+      const idx = i;
+      div.onclick = () => removeCard(street, idx);
+      div.title = 'タップで削除';
+    } else {
+      div.className = 'card-mini empty';
+      div.textContent = '?';
+    }
+    container.appendChild(div);
+  }
+}
+
+// ── カードクリック ───────────────────────────────────────────────
+function cardClick(r, s) {
+  const key = r + s;
+  if (usedSet().has(key)) return;
+
+  const max = currentStreet === 'flop' ? 3 : 1;
+  if (streets[currentStreet].length >= max) return;
+
+  streets[currentStreet].push({r, s, v: RV[r]});
+
+  // フロップが揃ったらターンタブを有効化して自動遷移
+  if (currentStreet === 'flop' && streets.flop.length === 3) {
+    currentStreet = 'turn';
+  } else if (currentStreet === 'turn' && streets.turn.length === 1) {
+    currentStreet = 'river';
+  }
+
+  updateUI();
   tryCalculate();
 }
 
-function selectSuit(i, s) {
-  if (!board[i].r) return;
-  const key = board[i].r + s;
-  if (usedSet(i).has(key)) return;
-  board[i].s = s;
-  refreshSlot(i);
-  updateSlotEnabled();
+function removeCard(street, idx) {
+  streets[street].splice(idx, 1);
+  // 後続ストリートをクリア
+  if (street === 'flop') { streets.turn = []; streets.river = []; currentStreet = 'flop'; }
+  else if (street === 'turn') { streets.river = []; currentStreet = 'turn'; }
+  updateUI();
   tryCalculate();
 }
 
-function refreshSlot(i) {
-  const {r, s} = board[i];
-  const used   = usedSet(i);
-
-  for (const rk of RANKS) {
-    document.getElementById(`rb${i}${rk}`).classList.toggle('active', rk === r);
-  }
-
-  for (const su of SUITS) {
-    const b = document.getElementById(`sb${i}${su}`);
-    const dup = r && used.has(r + su);
-    b.classList.toggle('active', su === s);
-    b.style.opacity = dup ? '0.12' : '';
-    b.style.cursor  = dup ? 'not-allowed' : '';
-  }
-
-  const cd = document.getElementById(`cd${i}`);
-  if (!r) {
-    cd.className = 'cd empty'; cd.innerHTML = '?';
-  } else {
-    const isRed = s && RED.has(s);
-    cd.className = 'cd' + (isRed ? ' rc' : '');
-    cd.innerHTML = `<span>${r}</span><span class="sc">${s ? SC[s] : ''}</span>`;
-  }
-
-  // 他スロットのスーツ重複禁止を更新
-  for (let j = 0; j < 5; j++) { if (j !== i) refreshSuitDisable(j); }
-}
-
-function refreshSuitDisable(i) {
-  const {r} = board[i];
-  const used = usedSet(i);
-  for (const su of SUITS) {
-    const b = document.getElementById(`sb${i}${su}`);
-    if (!b) continue;
-    const dup = r && used.has(r + su);
-    b.style.opacity = dup ? '0.12' : '';
-    b.style.cursor  = dup ? 'not-allowed' : '';
-  }
+function switchStreet(s) {
+  if (s === 'turn'  && streets.flop.length < 3) return;
+  if (s === 'river' && streets.turn.length < 1) return;
+  currentStreet = s;
+  updateTabs();
+  updateCardGrid();
 }
 
 function resetAll() {
-  for (let i = 0; i < 5; i++) { board[i].r = null; board[i].s = null; }
-  buildUI();
-  document.getElementById('result').style.display = 'none';
+  streets.flop = []; streets.turn = []; streets.river = [];
+  currentStreet = 'flop';
+  updateUI();
+  document.getElementById('result-empty').style.display = 'block';
+  document.getElementById('result-content').style.display = 'none';
 }
 
-// ── 手役評価 ──────────────────────────────────────────────────
-const HAND_RANK = {sf:8, quads:7, fh:6, flush:5, str:4, trips:3, twopair:2, pair:1, high:0};
+// ── UI 更新 ──────────────────────────────────────────────────────
+function updateUI() {
+  renderBoardDisplay();
+  updateTabs();
+  updateCardGrid();
+}
+
+function updateTabs() {
+  for (const s of ['flop','turn','river']) {
+    const tab = document.getElementById(`tab-${s}`);
+    tab.classList.toggle('active', s === currentStreet);
+    const full = (s === 'flop' && streets.flop.length === 3)
+              || (s === 'turn' && streets.turn.length === 1)
+              || (s === 'river' && streets.river.length === 1);
+    tab.classList.toggle('street-full', full && s !== currentStreet);
+  }
+  document.getElementById('tab-turn').disabled  = streets.flop.length < 3;
+  document.getElementById('tab-river').disabled = streets.turn.length < 1;
+}
+
+function updateCardGrid() {
+  const used    = usedSet();
+  const current = new Set(streets[currentStreet].map(c => c.r + c.s));
+
+  for (const r of RANKS) {
+    for (const s of SUITS) {
+      const key = r + s;
+      const btn = document.getElementById(`cb-${r}${s}`);
+      if (!btn) continue;
+      btn.classList.remove('used', 'on-board', 'on-current');
+      if (current.has(key)) {
+        btn.classList.add('on-current');
+      } else if (used.has(key)) {
+        btn.classList.add('on-board');
+      }
+    }
+  }
+}
+
+// ── 手役評価 ─────────────────────────────────────────────────────
+const HAND_RANK = {sf:8,quads:7,fh:6,flush:5,str:4,trips:3,twopair:2,pair:1,high:0};
 
 function eval5(cards) {
-  const vals  = cards.map(c => c.v).sort((a, b) => b - a);
+  const vals  = cards.map(c => c.v).sort((a,b) => b-a);
   const suits = cards.map(c => c.s);
   const isFlush = suits.every(s => s === suits[0]);
   const uniq = [...new Set(vals)];
   let isStraight = false;
   if (uniq.length === 5) {
-    if (vals[0] - vals[4] === 4) isStraight = true;
-    if (vals[0]===14 && vals[1]===5 && vals[2]===4 && vals[3]===3 && vals[4]===2) isStraight = true;
+    if (vals[0]-vals[4] === 4) isStraight = true;
+    if (vals[0]===14&&vals[1]===5&&vals[2]===4&&vals[3]===3&&vals[4]===2) isStraight = true;
   }
   const freq = {};
-  vals.forEach(v => { freq[v] = (freq[v]||0) + 1; });
-  const cnts = Object.values(freq).sort((a, b) => b - a);
+  vals.forEach(v => { freq[v]=(freq[v]||0)+1; });
+  const cnts = Object.values(freq).sort((a,b) => b-a);
   if (isFlush && isStraight) return 'sf';
-  if (cnts[0] === 4)                  return 'quads';
-  if (cnts[0] === 3 && cnts[1] === 2) return 'fh';
-  if (isFlush)                        return 'flush';
-  if (isStraight)                     return 'str';
-  if (cnts[0] === 3)                  return 'trips';
-  if (cnts[0] === 2 && cnts[1] === 2) return 'twopair';
-  if (cnts[0] === 2)                  return 'pair';
+  if (cnts[0]===4)                  return 'quads';
+  if (cnts[0]===3 && cnts[1]===2)  return 'fh';
+  if (isFlush)                      return 'flush';
+  if (isStraight)                   return 'str';
+  if (cnts[0]===3)                  return 'trips';
+  if (cnts[0]===2 && cnts[1]===2)  return 'twopair';
+  if (cnts[0]===2)                  return 'pair';
   return 'high';
 }
 
-// N枚から5枚を選ぶ全組み合わせで最強手役を返す
 function evalBest5(cards) {
   if (cards.length === 5) return eval5(cards);
   let best = 'high';
   const n = cards.length;
-  for (let a = 0; a < n-4; a++)
-  for (let b = a+1; b < n-3; b++)
-  for (let c = b+1; c < n-2; c++)
-  for (let d = c+1; d < n-1; d++)
-  for (let e = d+1; e < n;   e++) {
+  for (let a=0;a<n-4;a++)
+  for (let b=a+1;b<n-3;b++)
+  for (let c=b+1;c<n-2;c++)
+  for (let d=c+1;d<n-1;d++)
+  for (let e=d+1;e<n;e++) {
     const h = eval5([cards[a],cards[b],cards[c],cards[d],cards[e]]);
     if (HAND_RANK[h] > HAND_RANK[best]) best = h;
   }
   return best;
 }
 
-// ── コンボ計算 ──────────────────────────────────────────────
 function calculate(boardCards) {
-  const usedKeys  = new Set(boardCards.map(c => c.r + c.s));
-  const remaining = FULL_DECK.filter(c => !usedKeys.has(c.r + c.s));
-  const counts = {sf:0, quads:0, fh:0, flush:0, str:0, trips:0, twopair:0, pair:0, high:0};
-
-  for (let i = 0; i < remaining.length; i++) {
-    for (let j = i+1; j < remaining.length; j++) {
-      const hand = evalBest5([remaining[i], remaining[j], ...boardCards]);
-      counts[hand]++;
-    }
+  const used = new Set(boardCards.map(c => c.r+c.s));
+  const rem  = FULL_DECK.filter(c => !used.has(c.r+c.s));
+  const cnt  = {sf:0,quads:0,fh:0,flush:0,str:0,trips:0,twopair:0,pair:0,high:0};
+  for (let i=0;i<rem.length;i++)
+  for (let j=i+1;j<rem.length;j++) {
+    cnt[evalBest5([rem[i],rem[j],...boardCards])]++;
   }
-  return counts;
+  return cnt;
 }
 
-// ── 結果描画 ──────────────────────────────────────────────────
-const HAND_ROWS = [
-  {key:'sf',       label:'ストレートフラッシュ', group:'good'},
-  {key:'quads',    label:'フォーカード',         group:'good'},
-  {key:'fh',       label:'フルハウス',           group:'good'},
-  {key:'flush',    label:'フラッシュ',           group:'good'},
-  {key:'str',      label:'ストレート',           group:'good'},
-  {key:'trips',    label:'スリーカード',         group:'good'},
-  {key:'twopair',  label:'ツーペア',             group:'good'},
-  {key:'pair',     label:'ワンペア',             group:'weak'},
-  {key:'high',     label:'ノーペア',             group:'weak'},
-];
+// ── 結果描画 ─────────────────────────────────────────────────────
+function tryCalculate() {
+  const bc = getAllCards();
+  if (bc.length < 3) {
+    document.getElementById('result-empty').style.display = 'block';
+    document.getElementById('result-content').style.display = 'none';
+    return;
+  }
+  const counts = calculate(bc);
+  renderResult(counts, bc.length);
+}
 
 function renderResult(counts, boardCount) {
-  const remaining = 52 - boardCount;
-  const total     = remaining * (remaining - 1) / 2;
-  const stageLabel = boardCount === 3 ? 'フロップ' : boardCount === 4 ? 'ターン' : 'リバー';
+  const rem   = 52 - boardCount;
+  const total = rem * (rem-1) / 2;
+  const stage = boardCount===3 ? 'フロップ' : boardCount===4 ? 'ターン' : 'リバー';
 
-  document.getElementById('result').style.display = 'block';
-  document.getElementById('result-title').textContent =
-    `${stageLabel} — 残り${remaining}枚からのホールカード組み合わせ: ${total.toLocaleString()}通り`;
+  document.getElementById('result-empty').style.display = 'none';
+  document.getElementById('result-content').style.display = 'block';
+  document.getElementById('res-header').textContent =
+    `${stage} — 残り${rem}枚 / ${total.toLocaleString()}通り`;
 
-  const twoPlusKeys = ['sf','quads','fh','flush','str','trips','twopair'];
-  const twoPlusTotal = twoPlusKeys.reduce((acc, k) => acc + counts[k], 0);
-  const maxVal = Math.max(...Object.values(counts), 1);
+  const tpKeys  = ['sf','quads','fh','flush','str','trips','twopair'];
+  const tpTotal = tpKeys.reduce((a,k) => a+counts[k], 0);
+  const tpPct   = (tpTotal/total*100).toFixed(1);
+  document.getElementById('tp-num').textContent = tpTotal.toLocaleString();
+  document.getElementById('tp-pct').textContent = `${tpPct}%`;
 
+  const maxVal = Math.max(...HAND_DEF.map(d => counts[d.key]), 1);
   let html = '';
-  let prevGroup = null;
-
-  for (const {key, label, group} of HAND_ROWS) {
-    const n    = counts[key];
-    const pct  = (n / total * 100).toFixed(1);
-    const barW = (n / maxVal * 100).toFixed(1);
-    const dim  = group === 'weak' ? ' style="color:var(--muted)"' : '';
-
-    if (prevGroup === 'good' && group === 'weak') {
-      const tp = twoPlusTotal, tpPct = (tp / total * 100).toFixed(1);
-      html += `
-        <tr class="twoplus-row">
-          <td class="tname hand-name">▶ ツーペア以上 合計</td>
-          <td class="num">${tp.toLocaleString()}</td>
-          <td class="pct">${tpPct}%</td>
-          <td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:${tpPct}%;background:var(--blue)"></div></div></td>
-        </tr>
-        <tr class="divider"><td colspan="4"></td></tr>
-      `;
-    }
-
+  for (const {key, label} of HAND_DEF) {
+    const n   = counts[key];
+    const pct = (n/total*100).toFixed(1);
+    const bar = (n/maxVal*100).toFixed(1);
     html += `
-      <tr class="hand-row ${key}">
-        <td class="hand-name"${dim}>${label}</td>
-        <td class="num"${dim}>${n.toLocaleString()}</td>
-        <td class="pct"${dim}>${pct}%</td>
-        <td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:${barW}%"></div></div></td>
-      </tr>
-    `;
-    prevGroup = group;
+      <tr class="${key}">
+        <td>${label}</td>
+        <td class="n">${n.toLocaleString()}</td>
+        <td class="p">${pct}%</td>
+        <td class="bar-td"><div class="bar-bg"><div class="bar-fg" style="width:${bar}%"></div></div></td>
+      </tr>`;
   }
-
-  html += `
-    <tr class="divider"><td colspan="4"></td></tr>
-    <tr class="total-row">
-      <td class="hand-name">合計</td>
-      <td class="num">${total.toLocaleString()}</td>
-      <td class="pct">100%</td>
-      <td class="bar-cell"></td>
-    </tr>
-  `;
-
-  document.getElementById('result-body').innerHTML = html;
+  document.getElementById('hand-tbody').innerHTML = html;
 }
 
-// ── 自動計算 ─────────────────────────────────────────────────
-function tryCalculate() {
-  const n = completedCount();
-  if (n < 3) return;
-  const boardCards = board.slice(0, n).map(c => ({r: c.r, s: c.s, v: RV[c.r]}));
-  const counts = calculate(boardCards);
-  renderResult(counts, n);
-}
-
-// ── 初期化 ───────────────────────────────────────────────────
-buildUI();
+// ── 初期化 ───────────────────────────────────────────────────────
+buildGrid();
+renderBoardDisplay();
+updateTabs();
 </script>
 </body>
 </html>
