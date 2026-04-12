@@ -81,6 +81,25 @@
   .fw-nb:hover{color:var(--text);}
   .fw-xb{font-family:'DM Mono',monospace;font-size:12px;letter-spacing:.05em;padding:9px 22px;background:var(--accent);border:none;border-radius:4px;color:#fff;cursor:pointer;opacity:.35;transition:opacity .15s;}
   .fw-xb:not([disabled]){opacity:1;cursor:pointer;}
+  /* ── lookup card picker ── */
+  .lk-picker{display:flex;flex-direction:column;gap:3px;margin-bottom:12px;}
+  .lk-suit-row{display:flex;align-items:center;gap:3px;}
+  .lk-suit-lbl{font-size:16px;width:22px;text-align:center;flex-shrink:0;line-height:1;}
+  .lk-suit-cards{display:grid;grid-template-columns:repeat(13,1fr);gap:2px;flex:1;}
+  .lk-cb{height:28px;border:none;border-radius:4px;font-family:'DM Mono',monospace;
+    font-size:11px;font-weight:500;cursor:pointer;padding:0;
+    display:flex;align-items:center;justify-content:center;transition:opacity .1s;}
+  .lk-suit-s .lk-cb{background:#2a2a40;color:#d0cfe8;}
+  .lk-suit-h .lk-cb{background:#5a1212;color:#ffd8d8;}
+  .lk-suit-d .lk-cb{background:#0e2d70;color:#c8d8ff;}
+  .lk-suit-c .lk-cb{background:#0d4525;color:#c0f0d0;}
+  .lk-cb.lk-sel{outline:2px solid rgba(255,255,255,.85);outline-offset:-2px;opacity:1;}
+  .lk-cb.lk-used{opacity:.13;cursor:not-allowed;pointer-events:none;}
+  .lk-cards-row{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+  .lk-reset{font-family:'DM Mono',monospace;font-size:11px;padding:5px 12px;
+    background:none;border:.5px solid var(--border2);border-radius:4px;
+    color:var(--muted);cursor:pointer;}
+  .lk-reset:hover{color:var(--text);}
 </style>
 </head>
 <body>
@@ -104,29 +123,11 @@
       <div class="sl">レイザーのポジション</div>
       <div class="pos-row" id="raiser-row"></div>
     </div>
-    <div class="cards-grid">
-      <div>
-        <div class="sl">1枚目</div>
-        <div class="rank-row" id="rr1"></div>
-        <div class="suit-row">
-          <button class="sb" onclick="selSuit(1,'s')">♠</button>
-          <button class="sb red" onclick="selSuit(1,'h')">♥</button>
-          <button class="sb red" onclick="selSuit(1,'d')">♦</button>
-          <button class="sb" onclick="selSuit(1,'c')">♣</button>
-        </div>
-        <div id="c1d"><div class="cd empty">?</div></div>
-      </div>
-      <div>
-        <div class="sl">2枚目</div>
-        <div class="rank-row" id="rr2"></div>
-        <div class="suit-row">
-          <button class="sb" onclick="selSuit(2,'s')">♠</button>
-          <button class="sb red" onclick="selSuit(2,'h')">♥</button>
-          <button class="sb red" onclick="selSuit(2,'d')">♦</button>
-          <button class="sb" onclick="selSuit(2,'c')">♣</button>
-        </div>
-        <div id="c2d"><div class="cd empty">?</div></div>
-      </div>
+    <div class="lk-picker" id="lk-picker"></div>
+    <div class="lk-cards-row">
+      <div id="c1d"><div class="cd empty">?</div></div>
+      <div id="c2d"><div class="cd empty">?</div></div>
+      <button class="lk-reset" onclick="resetCards()">&#x21BA; リセット</button>
     </div>
     <div class="aarea" id="aarea"><span class="aph">シナリオ・ポジション・カードを選んでください</span></div>
   </div>
@@ -280,88 +281,87 @@ const SC={s:'♠',h:'♥',d:'♦',c:'♣'};
 const REDSUIT=['h','d'];
 const POS=['UTG','UTG+1','UTG+2','LJ','HJ','CO','BTN','SB','BB'];
 
-// RFI ranges based on Amu's note (GTO Wizard 6max 100bb)
-// 赤=レイズ確定, ミックス=どちらでもOK
-// note: UTG→LJ, HJ→HJ, CO→CO, BTN→BTN, SB→SB (9max mapping)
-// Source: https://note.com/goole/n/n0848d4ac675f
-// RFI ranges — 画像から1セルずつ精密読み取り
-// 赤=レイズ確定, 赤青混在=ミックス, 青=フォールド
-// Source: https://note.com/goole/n/n0848d4ac675f
+// RFI ranges — GTO Wizard 9max 100bb cash
+// R=レイズ確定, M=ミックス（どちらでもOK）, F=フォールド
 const RFI={
-  // UTG / UTG+1 / UTG+2 (9max EP・noteに掲載なし → LJより一段タイト)
   UTG:['AA','KK','QQ','JJ','TT','99','88','77',
-    'AKs','AQs','AJs','ATs','A9s','A8s','A7s','A6s','A5s','A4s','A3s','A2s',
+    'AKs','AQs','AJs','ATs','A9s','A8s','A7s','A6s','A5s','A4s',
     'KQs','KJs','KTs',
-    'QJs','QTs','Q9s','JTs','J9s','T9s','98s',
-    'AKo','AQo','AJo','KQo','KJo'],
+    'AKo','AQo'],
   'UTG+1':['AA','KK','QQ','JJ','TT','99','88','77',
-    'AKs','AQs','AJs','ATs','A9s','A8s','A7s','A6s','A5s','A4s','A3s','A2s',
+    'AKs','AQs','AJs','ATs','A9s','A8s','A7s','A6s','A5s','A4s','A3s',
     'KQs','KJs','KTs','K9s',
-    'QJs','QTs','Q9s','JTs','J9s','T9s','98s',
-    'AKo','AQo','AJo','KQo','KJo'],
+    'AKo','AQo','AJo','KQo'],
   'UTG+2':['AA','KK','QQ','JJ','TT','99','88','77',
-    'AKs','AQs','AJs','ATs','A9s','A8s','A7s','A6s','A5s','A4s','A3s','A2s',
+    'AKs','AQs','AJs','ATs','A9s','A8s','A7s','A6s','A5s','A4s','A3s',
     'KQs','KJs','KTs','K9s',
-    'QJs','QTs','Q9s','JTs','J9s','T9s','98s',
-    'AKo','AQo','AJo','ATo','KQo','KJo'],
-  // LJ = note UTG
-  LJ:['AA','KK','QQ','JJ','TT','99','88','77',
-    'AKs','AQs','AJs','ATs','A9s','A8s','A7s','A6s','A5s','A4s','A3s','A2s',
-    'KQs','KJs','KTs',
-    'QJs','QTs','Q9s','JTs','J9s','T9s','98s',
-    'AKo','AQo','AJo','KQo','KJo'],
-  // HJ = note HJ
-  HJ:['AA','KK','QQ','JJ','TT','99','88',
+    'QJs','QTs',
+    'AKo','AQo','AJo','KQo'],
+  LJ:['AA','KK','QQ','JJ','TT','99','88',
     'AKs','AQs','AJs','ATs','A9s','A8s','A7s','A6s','A5s','A4s','A3s','A2s',
     'KQs','KJs','KTs','K9s','K8s',
-    'QJs','QTs','Q9s','Q8s',
-    'JTs','J9s','J8s',
-    'T9s','T8s','98s',
-    'AKo','AQo','AJo','KQo','KJo'],
-  // CO = note CO
-  CO:['AA','KK','QQ','JJ','TT','99','88',
-    'AKs','AQs','AJs','ATs','A9s','A8s','A7s','A6s','A5s','A4s','A3s','A2s',
-    'KQs','KJs','KTs','K9s','K8s','K7s','K6s','K5s','K4s','K3s','K2s',
-    'QJs','QTs','Q9s','Q8s','Q7s','Q6s','Q5s',
-    'JTs','J9s','J8s','J7s','J6s',
-    'T9s','T8s','T7s',
-    '98s','97s','87s',
-    'AKo','AQo','AJo','ATo','A9o','A5o',
-    'KQo','KJo'],
-  // BTN = note BTN
-  BTN:['AA','KK','QQ','JJ','TT','99','88','77','66','55','44','33','22',
-    'AKs','AQs','AJs','ATs','A9s','A8s','A7s','A6s','A5s','A4s','A3s','A2s',
-    'KQs','KJs','KTs','K9s','K8s','K7s','K6s','K5s','K4s','K3s','K2s',
-    'QJs','QTs','Q9s','Q8s','Q7s','Q6s',
-    'JTs','J9s','J8s','J7s','J6s','J5s',
-    'T9s','T8s','T7s','T6s',
-    '98s','97s','96s','87s','86s','85s','76s','75s','65s',
-    'AKo','AQo','AJo','ATo','A9o','A8o','A7o',
-    'KQo','KJo','KTo','K9o',
-    'QJo','QTo'],
-  // SB = note SB
-  SB:['AA','KK','QQ','JJ','TT','99','88','77','66','55','44','33','22',
+    'QJs','QTs','Q9s',
+    'JTs',
+    'AKo','AQo','AJo','ATo','KQo','KJo'],
+  HJ:['AA','KK','QQ','JJ','TT','99','88','77','66',
     'AKs','AQs','AJs','ATs','A9s','A8s','A7s','A6s','A5s','A4s','A3s','A2s',
     'KQs','KJs','KTs','K9s','K8s','K7s','K6s','K5s',
+    'QJs','QTs','Q9s','Q8s',
+    'JTs','J9s',
+    'AKo','AQo','AJo','ATo','KQo','KJo'],
+  CO:['AA','KK','QQ','JJ','TT','99','88','77','66','55',
+    'AKs','AQs','AJs','ATs','A9s','A8s','A7s','A6s','A5s','A4s','A3s','A2s',
+    'KQs','KJs','KTs','K9s','K8s','K7s','K6s','K5s','K4s','K3s',
     'QJs','QTs','Q9s','Q8s','Q7s','Q6s','Q5s',
+    'JTs','J9s','J8s',
+    'T9s','T8s',
+    '98s',
+    'AKo','AQo','AJo','ATo','A9o',
+    'KQo','KJo','KTo',
+    'QJo','QTo',
+    'JTo'],
+  BTN:['AA','KK','QQ','JJ','TT','99','88','77','66','55','44','33',
+    'AKs','AQs','AJs','ATs','A9s','A8s','A7s','A6s','A5s','A4s','A3s','A2s',
+    'KQs','KJs','KTs','K9s','K8s','K7s','K6s','K5s','K4s','K3s','K2s',
+    'QJs','QTs','Q9s','Q8s','Q7s','Q6s','Q5s','Q4s','Q3s',
     'JTs','J9s','J8s','J7s','J6s','J5s',
     'T9s','T8s','T7s','T6s',
-    '98s','97s','96s','87s','86s','85s','76s','75s','65s',
+    '98s','97s','96s',
+    '87s','86s',
+    '76s',
+    '65s',
     'AKo','AQo','AJo','ATo','A9o','A8o','A7o','A6o','A5o','A4o',
-    'KQo','KJo','KTo','QJo'],
+    'KQo','KJo','KTo','K9o',
+    'QJo','QTo','Q9o',
+    'JTo','J9o','T9o'],
+  SB:['AA','KK','QQ','JJ','TT','99','88','77','66','55','44','33','22',
+    'AKs','AQs','AJs','ATs','A9s','A8s','A7s','A6s','A5s','A4s','A3s','A2s',
+    'KQs','KJs','KTs','K9s','K8s','K7s','K6s','K5s','K4s','K3s','K2s',
+    'QJs','QTs','Q9s','Q8s','Q7s','Q6s','Q5s','Q4s','Q3s',
+    'JTs','J9s','J8s','J7s','J6s','J5s','J4s',
+    'T9s','T8s','T7s','T6s',
+    '98s','97s','96s',
+    '87s','86s','85s',
+    '76s','75s',
+    '65s','64s',
+    '54s',
+    'AKo','AQo','AJo','ATo','A9o','A8o','A7o','A6o','A5o','A4o',
+    'KQo','KJo','KTo','K9o',
+    'QJo','QTo','Q9o',
+    'JTo','J9o','T9o'],
   BB:[]
 };
 
-// ミックスレンジ（赤青混在 = どちらでもOK）
+// ミックスレンジ（どちらでもOK）
 const RFI_MIX={
-  UTG:   ['66','55','K9s','K8s','K7s','K6s','K5s','ATo','KTo','QJo'],
-  'UTG+1':['66','55','K8s','K7s','K6s','K5s','ATo','QJo'],
-  'UTG+2':['66','55','K8s','K7s','K6s','K5s','QJo'],
-  LJ:    ['66','55','K9s','K8s','K7s','K6s','K5s','ATo','KTo','QJo'],
-  HJ:    ['77','66','55','44','33','22','ATo','KTo','QJo'],
-  CO:    ['77','66','55','44','33','22','A8o','KTo','QJo'],
-  BTN:   ['Q5s','J4s','A6o','K8o','Q9o','JTo'],
-  SB:    ['K4s','K3s','K2s','Q4s','J4s','A3o','K9o','QTo'],
+  UTG:   ['A3s','K9s','K8s','K7s','K6s','K5s','AJo','ATo'],
+  'UTG+1':['K8s','K7s','K6s','K5s','QJs','ATo','KJo'],
+  'UTG+2':['A2s','K8s','K7s','K6s','K5s','JTs','ATo','KJo'],
+  LJ:    ['77','66','55','44','K7s','K6s','K5s','T9s','KTo','QJo','QTo'],
+  HJ:    ['55','44','33','22','K4s','Q7s','Q6s','Q5s','T9s','98s','A9o','A8o','A5o','KTo','QJo','QTo'],
+  CO:    ['44','33','22','K2s','Q4s','J7s','97s','87s','76s','65s','54s','A8o','A7o','A5o','K9o'],
+  BTN:   ['22','Q2s','J4s','T5s','75s','54s','A3o','K8o','K7o','J8o','T8o','98o'],
+  SB:    ['Q2s','53s','A3o','K8o','K7o','J8o','T8o','98o','87o'],
   BB:[]
 };
 
@@ -527,25 +527,59 @@ function buildChartRaiser(){
     el.appendChild(b);
   });
 }
-function buildRankBtns(n){
-  const el=document.getElementById('rr'+n);
-  R.forEach(r=>{
-    const b=document.createElement('button');
-    b.className='rb';b.id='rk'+n+r;b.textContent=r;
-    b.onclick=()=>selRank(n,r);el.appendChild(b);
+function buildCardSelector(){
+  const SUITS_DEF=[{s:'s',cls:'lk-suit-s',lbl:'♠'},{s:'h',cls:'lk-suit-h',lbl:'♥'},{s:'d',cls:'lk-suit-d',lbl:'♦'},{s:'c',cls:'lk-suit-c',lbl:'♣'}];
+  const picker=document.getElementById('lk-picker');
+  picker.innerHTML='';
+  SUITS_DEF.forEach(({s,cls,lbl})=>{
+    const row=document.createElement('div');
+    row.className=`lk-suit-row ${cls}`;
+    const ll=document.createElement('span');
+    ll.className='lk-suit-lbl';ll.textContent=lbl;
+    row.appendChild(ll);
+    const grid=document.createElement('div');
+    grid.className='lk-suit-cards';
+    R.forEach(r=>{
+      const b=document.createElement('button');
+      b.className='lk-cb';b.id=`lk-${r}${s}`;b.textContent=r;
+      b.onclick=()=>lkCardClick(r,s);
+      grid.appendChild(b);
+    });
+    row.appendChild(grid);
+    picker.appendChild(row);
   });
 }
-function selRank(n,r){
-  if(n===1)st.r1=r;else st.r2=r;
-  R.forEach(x=>{const e=document.getElementById('rk'+n+x);if(e)e.classList.remove('active');});
-  const e=document.getElementById('rk'+n+r);if(e)e.classList.add('active');
-  updCard(n);upd();
+function lkCardClick(r,s){
+  const key=r+s;
+  // toggle: c1 selected with this card → deselect
+  if(st.r1===r&&st.s1===s){st.r1=null;st.s1=null;updCard(1);updCard(2);lkRefreshGrid();upd();return;}
+  // toggle: c2 selected with this card → deselect
+  if(st.r2===r&&st.s2===s){st.r2=null;st.s2=null;updCard(2);lkRefreshGrid();upd();return;}
+  // already used by the other card
+  if((st.r1===r&&st.s1===s)||(st.r2===r&&st.s2===s))return;
+  if(!st.r1&&!st.s1){st.r1=r;st.s1=s;}
+  else if(!st.r2&&!st.s2){st.r2=r;st.s2=s;}
+  else{st.r2=r;st.s2=s;} // overwrite c2 if both filled
+  updCard(1);updCard(2);lkRefreshGrid();upd();
 }
-function selSuit(n,s){
-  if(n===1)st.s1=s;else st.s2=s;
-  const btns=document.querySelectorAll(n===1?'#tab-lookup .cards-grid>div:first-child .suit-row .sb':'#tab-lookup .cards-grid>div:last-child .suit-row .sb');
-  btns.forEach((b,i)=>b.classList.toggle('active',i===(['s','h','d','c'].indexOf(s))));
-  updCard(n);upd();
+function lkRefreshGrid(){
+  const used=new Set();
+  if(st.r1&&st.s1)used.add(st.r1+st.s1);
+  if(st.r2&&st.s2)used.add(st.r2+st.s2);
+  const sel=new Set();
+  if(st.r1&&st.s1)sel.add(st.r1+st.s1);
+  if(st.r2&&st.s2)sel.add(st.r2+st.s2);
+  R.forEach(r=>['s','h','d','c'].forEach(s=>{
+    const b=document.getElementById(`lk-${r}${s}`);if(!b)return;
+    const k=r+s;
+    b.classList.remove('lk-sel','lk-used');
+    if(sel.has(k))b.classList.add('lk-sel');
+    else if(used.has(k))b.classList.add('lk-used');
+  }));
+}
+function resetCards(){
+  st.r1=null;st.s1=null;st.r2=null;st.s2=null;
+  updCard(1);updCard(2);lkRefreshGrid();upd();
 }
 function updCard(n){
   const r=n===1?st.r1:st.r2,s=n===1?st.s1:st.s2;
@@ -1170,8 +1204,7 @@ function fwAutoDetect(){
   const suitCount={};allSuits.forEach(s=>{suitCount[s]=(suitCount[s]||0)+1;});
   const maxS=Math.max(...Object.values(suitCount));
   const isMono=new Set(boardSuits).size===1&&boardSuits.length===3;
-  const isFlushDraw=maxS===4;
-  const maxBR=bv[0],isHigh=maxBR>=10,isLow=maxBR<=7;
+  const maxBR=bv[0],isLow=maxBR<=7;
   const connected=bv[0]-bv[bv.length-1]<=4&&bvUniq.length===3;
   let tex='dryhigh';
   if(isMono)tex='mono';
@@ -1179,29 +1212,81 @@ function fwAutoDetect(){
   else if(isLow&&connected)tex='low';
   else if(connected)tex='wet';
   else if(isLow)tex='low';
-  else if(isHigh)tex='dryhigh';
+  else if(maxBR>=10)tex='dryhigh';
   else tex='drymid';
   fw.tex=tex;
+
+  // ── ストレート判定用の値セット（Aは1としても使用） ──
+  const valSet=new Set([h1v,h2v,...bv]);
+  if(valSet.has(14))valSet.add(1);
+
   const hb1=bv.includes(h1v),hb2=bv.includes(h2v),isPP=h1v===h2v;
+
+  // ── メイドハンド（高優先） ──────────────────────────
+  // ポケットペアがボードにヒット（セット/フルハウス/クアッズ）
   if(isPP&&hb1){fw.hand='nuts';return;}
-  if(hb1&&hb2){fw.hand=(h1v===bv[0]||h2v===bv[0])?'2pair_str':'2pair_weak';return;}
+
+  // ペアボードでトリップス：ホールカードがペアランクにヒット
+  if(isPaired){
+    const pairedRank=bvUniq.find(r=>bv.filter(x=>x===r).length>=2);
+    if(pairedRank&&(h1v===pairedRank||h2v===pairedRank)){fw.hand='nuts';return;}
+  }
+
+  // メイドストレート：5枚のウィンドウに5枚揃う
+  for(let lo=1;lo<=10;lo++){
+    if([lo,lo+1,lo+2,lo+3,lo+4].every(v=>valSet.has(v))){fw.hand='nuts';return;}
+  }
+
+  // 2ペア：両ホールカードがそれぞれ別のボードランクにヒット
+  if(hb1&&hb2&&h1v!==h2v){fw.hand=(Math.max(h1v,h2v)===bv[0])?'2pair_str':'2pair_weak';return;}
+
+  // ペアボードでの2ペア：ホールカードがアンペアランクにヒット
+  if(isPaired){
+    const unpaired=bvUniq.find(r=>bv.filter(x=>x===r).length===1);
+    if(unpaired&&(h1v===unpaired||h2v===unpaired)){fw.hand='2pair_weak';return;}
+  }
+
+  // オーバーペア
   if(isPP&&h1v>bv[0]){fw.hand='op';return;}
-  if(hb1&&h1v===bv[0]){fw.hand=h2v>=10?'tptk':'tpwk';return;}
-  if(hb2&&h2v===bv[0]){fw.hand=h1v>=10?'tptk':'tpwk';return;}
-  if(hb1&&h1v===bv[1]){fw.hand='mp';return;}
-  if(hb2&&h2v===bv[1]){fw.hand='mp';return;}
+
+  // トップペア
+  if((hb1&&h1v===bv[0])||(hb2&&h2v===bv[0])){
+    const kicker=(hb1&&h1v===bv[0])?h2v:h1v;
+    fw.hand=kicker>=10?'tptk':'tpwk';return;
+  }
+
+  // ミドルペア（ボードの2番目のユニークランク）
+  const midRank=bvUniq[1];
+  if(midRank&&((hb1&&h1v===midRank)||(hb2&&h2v===midRank))){fw.hand='mp';return;}
+
+  // ボトムペア
   if(hb1||hb2){fw.hand='bp';return;}
+
+  // ── ドロー ────────────────────────────────────────────
+  // フラッシュドロー（合計4枚同スーツ）
   const fsuit=Object.keys(suitCount).find(s=>suitCount[s]===maxS);
   const hf=[s1,s2].filter(s=>s===fsuit).length;
-  if(isFlushDraw&&hf>=1){fw.hand=((r1==='A'&&s1===fsuit)||(r2==='A'&&s2===fsuit))?'nfd':'fd';return;}
-  const vals=[h1v,h2v,...bv].sort((a,b)=>a-b);
-  const uniq=[...new Set(vals)];
-  let maxC=1,cur=1;
-  for(let i=1;i<uniq.length;i++){cur=uniq[i]===uniq[i-1]+1?cur+1:1;maxC=Math.max(maxC,cur);}
-  if(maxC>=4){fw.hand='oesd';return;}
-  if(maxC===3){fw.hand='gs';return;}
-  const bdfd=boardSuits.filter(s=>[s1,s2].includes(s)).length;
-  if(bdfd>=2){fw.hand='bdfd';return;}
+  if(maxS===4&&hf>=1){fw.hand=((r1==='A'&&s1===fsuit)||(r2==='A'&&s2===fsuit))?'nfd':'fd';return;}
+
+  // ストレートドロー：5枚ウィンドウに4枚揃うか確認
+  // OESDは4枚が連続、GSは4枚に1箇所ギャップあり
+  let hasOESD=false,hasGS=false;
+  for(let lo=1;lo<=10;lo++){
+    const window=[lo,lo+1,lo+2,lo+3,lo+4];
+    const pos=window.map((v,i)=>valSet.has(v)?i:-1).filter(i=>i>=0);
+    if(pos.length>=4){
+      let oesd=false;
+      for(let j=0;j<=pos.length-4;j++){if(pos[j+3]-pos[j]===3){oesd=true;break;}}
+      if(oesd)hasOESD=true;else hasGS=true;
+    }
+  }
+  if(hasOESD){fw.hand='oesd';return;}
+  if(hasGS){fw.hand='gs';return;}
+
+  // バックドアFD：3枚同スーツかつホールカードが1枚以上その色
+  const bdfSuit=Object.keys(suitCount).find(s=>suitCount[s]===3&&[s1,s2].includes(s));
+  if(bdfSuit){fw.hand='bdfd';return;}
+
   fw.hand='air';
 }
 function fwRenderResult(){
@@ -1246,7 +1331,7 @@ function fwInit(){
   fwBuildHoleRank();fwBuildFlopRank();fwBuildMyPos();fwBuildOppPos();
 }
 
-buildMyPos();buildRankBtns(1);buildRankBtns(2);
+buildMyPos();buildCardSelector();
 fwInit();
 cs.myPos='UTG';buildChartMyPos();renderGrid();
 cs.myPos='UTG';buildChartMyPos();renderGrid();
