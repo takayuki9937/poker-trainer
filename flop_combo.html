@@ -156,6 +156,17 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .total-row td{background:var(--surface2);font-weight:600;}
 .total-row td:first-child{color:var(--text);}
 .weak-row td:first-child{color:var(--muted);}
+
+/* ── ポジション選択 ── */
+#pos-select{flex-shrink:0;}
+#pos-label{font-size:8px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px;}
+#pos-buttons{display:flex;gap:3px;flex-wrap:wrap;}
+.pos-btn{
+  font-size:10px;padding:4px 8px;
+  background:var(--surface);border:1px solid var(--border);border-radius:4px;
+  color:var(--muted);font-family:inherit;cursor:pointer;transition:all .12s;
+}
+.pos-btn.sel{background:var(--blue);border-color:var(--blue);color:#fff;}
 </style>
 </head>
 <body>
@@ -189,7 +200,13 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
   <!-- ③ カードグリッド -->
   <div id="card-grid"></div>
 
-  <!-- ④ リセット -->
+  <!-- ④ ポジション選択 -->
+  <div id="pos-select">
+    <div id="pos-label">ポジション（任意）</div>
+    <div id="pos-buttons"></div>
+  </div>
+
+  <!-- ⑤ リセット -->
   <button id="reset-btn" onclick="resetAll()">&#x21BA; 全てリセット</button>
 
   <!-- ⑤ 結果パネル -->
@@ -241,15 +258,124 @@ const HAND_DEF = [
   {key:'twopair', label:'ツーペア'},
 ];
 
+// ── レンジデータ (GTO Wizard 9max 100bb) ────────────────────────
+const RANGE_DATA = {
+  UTG:{
+    R:['AA','KK','QQ','JJ','TT','99','88','77',
+       'AKs','AQs','AJs','ATs','A9s','A8s','A7s','A6s','A5s','A4s',
+       'KQs','KJs','KTs',
+       'AKo','AQo','KQo'],
+    M:['A3s','K9s','K8s','K7s','K6s','K5s','AJo','ATo']
+  },
+  'UTG+1':{
+    R:['AA','KK','QQ','JJ','TT','99','88','77',
+       'AKs','AQs','AJs','ATs','A9s','A8s','A7s','A6s','A5s','A4s','A3s',
+       'KQs','KJs','KTs','K9s',
+       'AKo','AQo','AJo','KQo'],
+    M:['K8s','K7s','K6s','K5s','QJs','ATo','KJo']
+  },
+  'UTG+2':{
+    R:['AA','KK','QQ','JJ','TT','99','88','77',
+       'AKs','AQs','AJs','ATs','A9s','A8s','A7s','A6s','A5s','A4s','A3s',
+       'KQs','KJs','KTs','K9s',
+       'QJs','QTs',
+       'AKo','AQo','AJo','KQo'],
+    M:['A2s','K8s','K7s','K6s','K5s','JTs','ATo','KJo']
+  },
+  LJ:{
+    R:['AA','KK','QQ','JJ','TT','99','88',
+       'AKs','AQs','AJs','ATs','A9s','A8s','A7s','A6s','A5s','A4s','A3s','A2s',
+       'KQs','KJs','KTs','K9s','K8s',
+       'QJs','QTs','Q9s','JTs',
+       'AKo','AQo','AJo','ATo','KQo','KJo'],
+    M:['77','66','55','44','K7s','K6s','K5s','T9s','KTo','QJo','QTo']
+  },
+  HJ:{
+    R:['AA','KK','QQ','JJ','TT','99','88','77','66',
+       'AKs','AQs','AJs','ATs','A9s','A8s','A7s','A6s','A5s','A4s','A3s','A2s',
+       'KQs','KJs','KTs','K9s','K8s','K7s','K6s','K5s',
+       'QJs','QTs','Q9s','Q8s',
+       'JTs','J9s',
+       'AKo','AQo','AJo','ATo','KQo','KJo'],
+    M:['55','44','33','22','K4s','Q7s','Q6s','Q5s','T9s','98s','A9o','A8o','A5o','KTo','QJo','QTo']
+  },
+  CO:{
+    R:['AA','KK','QQ','JJ','TT','99','88','77','66','55',
+       'AKs','AQs','AJs','ATs','A9s','A8s','A7s','A6s','A5s','A4s','A3s','A2s',
+       'KQs','KJs','KTs','K9s','K8s','K7s','K6s','K5s','K4s','K3s',
+       'QJs','QTs','Q9s','Q8s','Q7s','Q6s','Q5s',
+       'JTs','J9s','J8s','T9s','T8s','98s',
+       'AKo','AQo','AJo','ATo','A9o','KQo','KJo','KTo','QJo','QTo','JTo'],
+    M:['44','33','22','K2s','Q4s','J7s','97s','87s','76s','65s','54s','A8o','A7o','A5o','K9o']
+  },
+  BTN:{
+    R:['AA','KK','QQ','JJ','TT','99','88','77','66','55','44','33',
+       'AKs','AQs','AJs','ATs','A9s','A8s','A7s','A6s','A5s','A4s','A3s','A2s',
+       'KQs','KJs','KTs','K9s','K8s','K7s','K6s','K5s','K4s','K3s','K2s',
+       'QJs','QTs','Q9s','Q8s','Q7s','Q6s','Q5s','Q4s','Q3s',
+       'JTs','J9s','J8s','J7s','J6s','J5s',
+       'T9s','T8s','T7s','T6s','98s','97s','96s','87s','86s','76s','65s',
+       'AKo','AQo','AJo','ATo','A9o','A8o','A7o','A6o','A5o','A4o',
+       'KQo','KJo','KTo','K9o','QJo','QTo','Q9o','JTo','J9o','T9o'],
+    M:['22','Q2s','J4s','T5s','75s','54s','A3o','K8o','K7o','J8o','T8o','98o']
+  },
+  SB:{
+    R:['AA','KK','QQ','JJ','TT','99','88','77','66','55','44','33','22',
+       'AKs','AQs','AJs','ATs','A9s','A8s','A7s','A6s','A5s','A4s','A3s','A2s',
+       'KQs','KJs','KTs','K9s','K8s','K7s','K6s','K5s','K4s','K3s','K2s',
+       'QJs','QTs','Q9s','Q8s','Q7s','Q6s','Q5s','Q4s','Q3s',
+       'JTs','J9s','J8s','J7s','J6s','J5s','J4s',
+       'T9s','T8s','T7s','T6s','98s','97s','96s','87s','86s','85s',
+       '76s','75s','65s','64s','54s',
+       'AKo','AQo','AJo','ATo','A9o','A8o','A7o','A6o','A5o','A4o',
+       'KQo','KJo','KTo','K9o','QJo','QTo','Q9o','JTo','J9o','T9o'],
+    M:['Q2s','53s','A3o','K8o','K7o','J8o','T8o','98o','87o']
+  }
+};
+const POSITIONS = ['UTG','UTG+1','UTG+2','LJ','HJ','CO','BTN','SB'];
+
 // ── 状態 ────────────────────────────────────────────────────────
 const streets = {flop:[], turn:[], river:[]};
 let currentStreet = 'flop';
+let selectedPos = null;
 
 function getAllCards() {
   return [...streets.flop, ...streets.turn, ...streets.river];
 }
 function usedSet() {
   return new Set(getAllCards().map(c => c.r + c.s));
+}
+
+// ── ポジションボタン ─────────────────────────────────────────────
+function buildPosButtons() {
+  const wrap = document.getElementById('pos-buttons');
+  wrap.innerHTML = '';
+  const makeBtn = (label, pos) => {
+    const b = document.createElement('button');
+    b.className = 'pos-btn' + (selectedPos === pos ? ' sel' : '');
+    b.textContent = label;
+    b.onclick = () => {
+      selectedPos = (selectedPos === pos) ? null : pos;
+      buildPosButtons();
+      tryCalculate();
+    };
+    wrap.appendChild(b);
+  };
+  makeBtn('未選択', null);
+  for (const p of POSITIONS) makeBtn(p, p);
+}
+
+// ── レンジ判定 ───────────────────────────────────────────────────
+function handKey(r1, s1, r2, s2) {
+  const i1 = RANKS.indexOf(r1), i2 = RANKS.indexOf(r2);
+  if (i1 === i2) return r1 + r2;
+  const [h, l] = i1 < i2 ? [r1, r2] : [r2, r1];
+  return h + l + (s1 === s2 ? 's' : 'o');
+}
+function isInRange(pos, r1, s1, r2, s2) {
+  const key = handKey(r1, s1, r2, s2);
+  const rd = RANGE_DATA[pos];
+  return rd.R.includes(key) || rd.M.includes(key);
 }
 
 // ── グリッド構築 ─────────────────────────────────────────────────
@@ -446,11 +572,14 @@ function calculate(boardCards) {
   const used = new Set(boardCards.map(c => c.r+c.s));
   const rem  = FULL_DECK.filter(c => !used.has(c.r+c.s));
   const cnt  = {sf:0,quads:0,fh:0,flush:0,str:0,trips:0,twopair:0,pair:0,high:0};
+  let rangeTotal = 0;
   for (let i=0;i<rem.length;i++)
   for (let j=i+1;j<rem.length;j++) {
+    if (selectedPos && !isInRange(selectedPos, rem[i].r, rem[i].s, rem[j].r, rem[j].s)) continue;
     cnt[evalBest5([rem[i],rem[j],...boardCards])]++;
+    rangeTotal++;
   }
-  return cnt;
+  return {cnt, rangeTotal: selectedPos ? rangeTotal : null};
 }
 
 // ── 結果描画 ─────────────────────────────────────────────────────
@@ -461,23 +590,27 @@ function tryCalculate() {
     document.getElementById('result-content').style.display = 'none';
     return;
   }
-  const counts = calculate(bc);
-  renderResult(counts, bc.length);
+  const {cnt, rangeTotal} = calculate(bc);
+  renderResult(cnt, bc.length, rangeTotal);
 }
 
-function renderResult(counts, boardCount) {
-  const rem   = 52 - boardCount;
-  const total = rem * (rem-1) / 2;
-  const stage = boardCount===3 ? 'フロップ' : boardCount===4 ? 'ターン' : 'リバー';
+function renderResult(counts, boardCount, rangeTotal) {
+  const rem      = 52 - boardCount;
+  const allTotal = rem * (rem-1) / 2;
+  const total    = rangeTotal !== null ? rangeTotal : allTotal;
+  const stage    = boardCount===3 ? 'フロップ' : boardCount===4 ? 'ターン' : 'リバー';
 
   document.getElementById('result-empty').style.display = 'none';
   document.getElementById('result-content').style.display = 'block';
-  document.getElementById('res-header').textContent =
-    `${stage} — 残り${rem}枚 / ${total.toLocaleString()}通り`;
+
+  const headerText = rangeTotal !== null
+    ? `${stage} — ${selectedPos}レンジ / ${total.toLocaleString()} combos`
+    : `${stage} — 残り${rem}枚 / ${total.toLocaleString()}通り`;
+  document.getElementById('res-header').textContent = headerText;
 
   const tpKeys  = ['sf','quads','fh','flush','str','trips','twopair'];
   const tpTotal = tpKeys.reduce((a,k) => a+counts[k], 0);
-  const tpPct   = (tpTotal/total*100).toFixed(1);
+  const tpPct   = total > 0 ? (tpTotal/total*100).toFixed(1) : '0.0';
   document.getElementById('tp-num').textContent = tpTotal.toLocaleString();
   document.getElementById('tp-pct').textContent = `${tpPct}%`;
 
@@ -490,7 +623,7 @@ function renderResult(counts, boardCount) {
   let html = '';
   for (const {key, label, weak} of allRows) {
     const n   = counts[key];
-    const pct = (n/total*100).toFixed(1);
+    const pct = total > 0 ? (n/total*100).toFixed(1) : '0.0';
     const bar = (n/maxVal*100).toFixed(1);
     const cls = key + (weak ? ' weak-row' : '');
     html += `
@@ -515,6 +648,7 @@ function renderResult(counts, boardCount) {
 buildGrid();
 renderBoardDisplay();
 updateTabs();
+buildPosButtons();
 </script>
 </body>
 </html>
